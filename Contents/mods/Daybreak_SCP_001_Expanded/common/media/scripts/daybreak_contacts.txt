@@ -1,0 +1,60 @@
+module Base
+{
+    /* VisualAid is what cancels the Short Sighted trait. The game's check
+       (isWearingVisualAid) scans every worn item regardless of body location,
+       so the custom slot below works for both screen blur and gun sight range.
+       No ChanceToFall means they never fall out when the player trips. */
+    item Daybreak_ContactLenses
+    {
+        DisplayCategory = Accessory,
+        ItemType = base:clothing,
+        Weight = 0.02,
+        Icon = Daybreak_ContactLenses,
+        BodyLocation = Daybreak:ContactLenses,
+        ClothingItem = Daybreak_ContactLenses,
+        WorldStaticModel = AlcoholWipes,
+        ConditionMax = 100,
+        VisualAid = true,
+    }
+
+    /* A spent pair. Deliberately base:normal with no BodyLocation, so it
+       cannot be worn at all and nothing stale can sit in the lens slot. */
+    item Daybreak_ContactLenses_Used
+    {
+        DisplayCategory = Accessory,
+        ItemType = base:normal,
+        Weight = 0.02,
+        Icon = Daybreak_ContactLenses_Used,
+        WorldStaticModel = AlcoholWipes,
+    }
+
+    /* Drainable, like vanilla Glue: UseDelta 0.1 gives ten doses per bottle,
+       and the recipe below consumes one dose rather than the whole bottle. */
+    item Daybreak_LensSolution
+    {
+        DisplayCategory = FirstAid,
+        ItemType = base:drainable,
+        Weight = 0.3,
+        Icon = Daybreak_LensSolution,
+        UseDelta = 0.1,
+        UseWhileEquipped = false,
+        WorldStaticModel = Glue,
+    }
+
+    craftRecipe Daybreak_RehydrateContactLenses
+    {
+        timedAction = Making,
+        time = 60,
+        Tags = InHandCraft;Health;CanBeDoneInDark,
+        category = Medical,
+        inputs
+        {
+            item 1 [Base.Daybreak_ContactLenses_Used] mode:destroy,
+            item 1 [Base.Daybreak_LensSolution],
+        }
+        outputs
+        {
+            item 1 Base.Daybreak_ContactLenses,
+        }
+    }
+}

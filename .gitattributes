@@ -1,0 +1,4 @@
+# Keep the mod files LF in the repo and in the working copy, as they are now.
+* text=auto eol=lf
+*.png binary
+*.wav binary

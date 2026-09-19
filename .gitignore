@@ -1,0 +1,6 @@
+# Claude Code machine-local settings
+.claude/settings.local.json
+
+# Local archives of the workshop item
+*.rar
+*.zip

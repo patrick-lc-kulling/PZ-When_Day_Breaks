@@ -1,0 +1,24 @@
+module SCP
+{
+    sound SCPBurningFlesh1
+    {
+        category = Player,
+
+        clip
+        {
+            file = media/sound/burningFlesh1.wav,
+            volume = 1.0,
+        }
+    }
+
+    sound SCPQuietLiquefaction1
+    {
+        category = Player,
+
+        clip
+        {
+            file = media/sound/quiet_liquefaction1.wav,
+            volume = 1.0,
+        }
+    }
+}

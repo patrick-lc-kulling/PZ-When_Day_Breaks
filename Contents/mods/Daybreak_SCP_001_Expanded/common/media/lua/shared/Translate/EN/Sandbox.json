@@ -1,0 +1,33 @@
+{
+    "Sandbox_SCP": "Daybreak SCP-001",
+
+    "Sandbox_SCP.HeadDamageMultiplier": "Head Damage Multiplier",
+    "Sandbox_SCP.HeadDamageMultiplier_tooltip": "How much faster the head takes light damage compared to other body parts once exposed. Does not affect the chance of burn wounds.",
+
+    "Sandbox_SCP.MinExposureMsForBurns": "Min Exposure Time For Burns (ms)",
+    "Sandbox_SCP.MinExposureMsForBurns_tooltip": "How many continuous milliseconds of sunlight or moonlight exposure a bare body part needs before a burn wound is able to appear.",
+
+    "Sandbox_SCP.HoleBurnExposureMultiplier": "Holed Clothing Exposure Multiplier",
+    "Sandbox_SCP.HoleBurnExposureMultiplier_tooltip": "Multiplies the minimum exposure time for body parts only exposed through an unpatched hole, burning there takes longer by default, since the body part is still partially covered",
+
+    "Sandbox_SCP.MaxBurnChancePerCheck": "Max Burn Chance Per Check",
+    "Sandbox_SCP.MaxBurnChancePerCheck_tooltip": "The highest chance (0-1) that any single eligible, not-already-burned body part burns on a given check, this max value scales down proportionally with light intensity",
+
+    "Sandbox_SCP.MoonlightDamageEnabled": "Enable Moonlight Damage",
+    "Sandbox_SCP.MoonlightDamageEnabled_tooltip": "If enabled, exposed skin can also take damage and burns at night from moonlight, scaling with the current moon phase and cloud cover. Damage is independent of traits or settings making nights brighter",
+
+    "Sandbox_SCP.MoonlightMaxIntensity": "Moonlight Max Intensity",
+    "Sandbox_SCP.MoonlightMaxIntensity_tooltip": "How strong moonlight gets at its absolute peak",
+
+    "Sandbox_SCP.GeneralDamageMultiplier": "General Damage Multiplier",
+    "Sandbox_SCP.GeneralDamageMultiplier_tooltip": "Multiplies all health damage dealt to the player from sunlight and moonlight exposure, across every body part. Does not directly affect burn wound chance or timing.",
+
+    "Sandbox_SCP.VignetteEnabled": "Enable Death Vignette",
+    "Sandbox_SCP.VignetteEnabled_tooltip": "If enabled, a red vignette fades in around the screen edges while standing in damaging light, growing stronger the closer to death the player is.",
+
+    "Sandbox_SCP.VignetteMaxAlpha": "Vignette Max Opacity",
+    "Sandbox_SCP.VignetteMaxAlpha_tooltip": "How opaque the vignette gets at its absolute peak: fully faded in and at 0 health.",
+
+    "Sandbox_SCP.LensWearDays": "Contact Lens Wear Time (days)",
+    "Sandbox_SCP.LensWearDays_tooltip": "How many in-game days a pair of contact lenses lasts while actually being worn. The countdown pauses while they are out of your eyes. When it runs out the pair dries out and stops correcting your vision until restored with contact lens solution."
+}

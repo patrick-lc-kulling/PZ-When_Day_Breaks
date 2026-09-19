@@ -1,0 +1,21 @@
+{
+    "Base.Hat_GasMask": 0.2,
+    "Base.Hat_GasMask_nofilter": 0.2,
+    "Base.Hat_ImprovisedGasMask": 0.3,
+    "Base.Hat_ImprovisedGasMask_nofilter": 0.3,
+    "Base.Hat_HalloweenMaskDevil": 0.4,
+    "Base.Hat_HalloweenMaskMonster": 0.4,
+    "Base.Hat_HalloweenMaskPumpkin": 0.4,
+    "Base.Hat_HalloweenMaskSkeleton": 0.4,
+    "Base.Hat_HalloweenMaskVampire": 0.4,
+    "Base.Hat_HalloweenMaskWitch": 0.4,
+    "Base.Hat_HockeyMask": 0.4,
+    "Base.Hat_HockeyMask_Hide": 0.4,
+    "Base.Hat_HockeyMask_Wood": 0.4,
+    "Base.Hat_HockeyMask_Metal": 0.4,
+    "Base.Hat_HockeyMask_Copper": 0.4,
+    "Base.Hat_HockeyMask_Gold": 0.4,
+    "Base.Hat_HockeyMask_Silver": 0.4,
+    "Base.Hat_HockeyMask_MetalScrap": 0.4,
+    "Base.Hat_BoneMask": 0.4
+}
