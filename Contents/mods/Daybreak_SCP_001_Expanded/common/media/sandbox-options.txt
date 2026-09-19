@@ -59,3 +59,27 @@ option SCP.LensWearDays = {
     page = SCP,
     translation = SCP.LensWearDays,
 }
+
+option SCP.TaserDamageToPlayer = {
+    type = double, min = 0.0, max = 20.0, default = 2.0,
+    page = SCP,
+    translation = SCP.TaserDamageToPlayer,
+}
+
+option SCP.TaserDamageToZombie = {
+    type = double, min = 0.0, max = 100.0, default = 20.0,
+    page = SCP,
+    translation = SCP.TaserDamageToZombie,
+}
+
+option SCP.TaserStunSecondsPlayer = {
+    type = double, min = 0.0, max = 60.0, default = 6.0,
+    page = SCP,
+    translation = SCP.TaserStunSecondsPlayer,
+}
+
+option SCP.TaserStunSecondsZombie = {
+    type = double, min = 0.0, max = 60.0, default = 8.0,
+    page = SCP,
+    translation = SCP.TaserStunSecondsZombie,
+}

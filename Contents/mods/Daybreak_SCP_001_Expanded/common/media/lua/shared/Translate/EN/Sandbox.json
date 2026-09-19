@@ -29,5 +29,17 @@
     "Sandbox_SCP.VignetteMaxAlpha_tooltip": "How opaque the vignette gets at its absolute peak: fully faded in and at 0 health.",
 
     "Sandbox_SCP.LensWearDays": "Contact Lens Wear Time (days)",
-    "Sandbox_SCP.LensWearDays_tooltip": "How many in-game days a pair of contact lenses lasts while actually being worn. The countdown pauses while they are out of your eyes. When it runs out the pair dries out and stops correcting your vision until restored with contact lens solution."
+    "Sandbox_SCP.LensWearDays_tooltip": "How many in-game days a pair of contact lenses lasts while actually being worn. The countdown pauses while they are out of your eyes. When it runs out the pair dries out and stops correcting your vision until restored with contact lens solution.",
+
+    "Sandbox_SCP.TaserDamageToPlayer": "Taser Damage To Players",
+    "Sandbox_SCP.TaserDamageToPlayer_tooltip": "Flat health damage (0-100 scale) dealt to a human target hit by the Daybreak Taser. Kept low by default - the taser is meant to incapacitate, not wound.",
+
+    "Sandbox_SCP.TaserDamageToZombie": "Taser Damage To Zombies",
+    "Sandbox_SCP.TaserDamageToZombie_tooltip": "Flat health damage (0-100 scale) dealt to a zombie hit by the Daybreak Taser. Higher than the player value by default, since zombies have no wound system to otherwise incapacitate them with.",
+
+    "Sandbox_SCP.TaserStunSecondsPlayer": "Taser Stun Duration (Players, seconds)",
+    "Sandbox_SCP.TaserStunSecondsPlayer_tooltip": "How many real-world seconds a player hit by the Daybreak Taser is forced to stay knocked down.",
+
+    "Sandbox_SCP.TaserStunSecondsZombie": "Taser Stun Duration (Zombies, seconds)",
+    "Sandbox_SCP.TaserStunSecondsZombie_tooltip": "How many real-world seconds a zombie hit by the Daybreak Taser is forced to stay knocked down."
 }

@@ -1,5 +1,7 @@
 {
     "Base.Daybreak_ContactLenses": "Contact Lenses",
     "Base.Daybreak_ContactLenses_Used": "Contact Lenses (Dried Out)",
-    "Base.Daybreak_LensSolution": "Contact Lens Solution"
+    "Base.Daybreak_LensSolution": "Contact Lens Solution",
+    "Base.Daybreak_Taser": "Taser",
+    "Base.Daybreak_TaserCartridge": "Taser Cartridge"
 }

@@ -1,0 +1,69 @@
+module Base
+{
+    /* Placeholder visuals: reuses the vanilla M1911 (Pistol2) model/icon until
+       the mod has its own art. MinDamage/MaxDamage are deliberately almost
+       zero - a real hit is a graze, not a wound. The actual "damage" (and the
+       forced knockdown) is applied entirely in Lua, in
+       media/lua/shared/SCP001/Taser.lua, keyed off this item's FullType, so
+       vanilla combat never doubles up on top of it. Tune behaviour there
+       (or via the matching Daybreak SCP-001 sandbox options) rather than
+       here - the numbers below only control the vanilla shot itself
+       (accuracy, range, sound, reload), not how much it hurts or how long it
+       drops someone. */
+    item Daybreak_Taser
+    {
+        DisplayCategory = Weapon,
+        Type = Weapon,
+        Icon = Pistol2,
+        WorldStaticModel = Pistol2,
+        Weight = 1.1,
+        Categories = Firearm,
+        SubCategory = Handgun,
+        ConditionMax = 20,
+        ConditionLowerChanceOneIn = 80,
+        RequiresEquippedBothHands = FALSE,
+
+        MinDamage = 0.01,
+        MaxDamage = 0.02,
+        DoorDamage = 1,
+        TreeDamage = 0,
+        SplatBloodOnNoDeath = FALSE,
+
+        MinRange = 0.5,
+        MaxRange = 6,
+        MinAngle = 0.85,
+        HitChance = 75,
+        AimingPerkHitChanceModifier = 10,
+        AimingPerkRangeModifier = 0.5,
+        AimingPerkMinAngleModifier = 0.05,
+        CriticalChance = 0,
+
+        PushBackMod = 0.1,
+        KnockdownMod = 0.0,
+        RecoilDelay = 20,
+
+        SwingSound = FirearmPistol,
+        ClickSound = Handgun1Click,
+        SoundVolume = 40,
+        SoundRadius = 30,
+
+        ReloadTime = 100,
+        AmmoType = Base.Daybreak_TaserCartridge,
+        ClipSize = 1,
+    }
+
+    /* Single-use per shot, like the real M26's disposable probe cartridges -
+       the taser itself is what's "rearmable" (just reload it with a fresh
+       one from your inventory via the normal Reload action). Reuses the
+       vanilla battery model/icon as a stand-in for a small sealed cartridge. */
+    item Daybreak_TaserCartridge
+    {
+        DisplayCategory = Ammo,
+        Type = Normal,
+        Icon = Battery,
+        WorldStaticModel = Battery,
+        Weight = 0.05,
+        CanStack = TRUE,
+        StackWeight = 0.05,
+    }
+}
