@@ -29,5 +29,15 @@
     "Sandbox_SCP.VignetteMaxAlpha_tooltip": "How opaque the vignette gets at its absolute peak: fully faded in and at 0 health.",
 
     "Sandbox_SCP.LensWearDays": "Contact Lens Wear Time (days)",
-    "Sandbox_SCP.LensWearDays_tooltip": "How many in-game days a pair of contact lenses lasts while actually being worn. The countdown pauses while they are out of your eyes. When it runs out the pair dries out and stops correcting your vision until restored with contact lens solution."
+    "Sandbox_SCP.LensWearDays_tooltip": "How many in-game days a pair of contact lenses lasts while actually being worn. The countdown pauses while they are out of your eyes. When it runs out the pair dries out and stops correcting your vision until restored with contact lens solution.",
+
+    "Sandbox_SCP.CreatureEvolutionPace": "Creature Evolution Pace",
+    "Sandbox_SCP.CreatureEvolutionPace_tooltip": "How quickly the liquefied merge into bigger, more dangerous creatures. At 1.0 pairs start appearing around day 7 and larger collectives around day 21; at 2.0 everything arrives in half the time.",
+    "Sandbox_SCP.CreatureMerging": "Enable Creature Merging",
+    "Sandbox_SCP.CreatureMerging_tooltip": "If enabled, two creatures of the same kind that stay pressed together for a few seconds merge into one tougher, slower creature, so crowds at your door slowly become fewer but bigger.",
+    "Sandbox_SCP.GrasperStripChance": "Grasper Strip Chance (%)",
+    "Sandbox_SCP.GrasperStripChance_tooltip": "Chance that a hit from a Grasper tears off your helmet or mask and drops it at your feet. After it happens, no Grasper can do it again for a few seconds.",
+
+    "Sandbox_SCP.CollectiveMax": "Max Great Collectives",
+    "Sandbox_SCP.CollectiveMax_tooltip": "How many Great Collectives can exist in the world at once. From around day 45 two Masses pressed together merge into one, and the world occasionally places one far from the players to be found. 0 turns them off entirely."
 }

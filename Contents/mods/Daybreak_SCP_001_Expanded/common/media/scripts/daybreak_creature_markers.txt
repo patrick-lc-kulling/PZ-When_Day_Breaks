@@ -1,0 +1,65 @@
+module Base
+{
+    /* PLACEHOLDER markers for the liquefied creature types, until they get
+       their own models. Each is the vanilla hard hat pinned to one colour, so
+       a type can be told apart at a glance:
+           Conjoined = yellow, Caller = white, Grasper = red, Mass = blue.
+
+       They drop on the corpse like any outfit clothing, so they are made
+       worthless on purpose: no bite or scratch defense, and the plain hat
+       slot, which the sun code does not count as covering the head at all.
+       Anything better would turn every evolved kill into free protective
+       gear. ChanceToFall 0 keeps the marker on while the creature is hit. */
+
+    item Daybreak_Marker_Conjoined
+    {
+        DisplayCategory = Accessory,
+        ItemType = base:clothing,
+        Weight = 0.5,
+        Icon = HardHatYellow,
+        BodyLocation = base:hat,
+        ClothingItem = Daybreak_Marker_Conjoined,
+        BloodLocation = Head,
+        CanHaveHoles = false,
+        ChanceToFall = 0,
+    }
+
+    item Daybreak_Marker_Caller
+    {
+        DisplayCategory = Accessory,
+        ItemType = base:clothing,
+        Weight = 0.5,
+        Icon = HardHatWhite,
+        BodyLocation = base:hat,
+        ClothingItem = Daybreak_Marker_Caller,
+        BloodLocation = Head,
+        CanHaveHoles = false,
+        ChanceToFall = 0,
+    }
+
+    item Daybreak_Marker_Grasper
+    {
+        DisplayCategory = Accessory,
+        ItemType = base:clothing,
+        Weight = 0.5,
+        Icon = HardHatRed,
+        BodyLocation = base:hat,
+        ClothingItem = Daybreak_Marker_Grasper,
+        BloodLocation = Head,
+        CanHaveHoles = false,
+        ChanceToFall = 0,
+    }
+
+    item Daybreak_Marker_Mass
+    {
+        DisplayCategory = Accessory,
+        ItemType = base:clothing,
+        Weight = 0.5,
+        Icon = HardHatBlue,
+        BodyLocation = base:hat,
+        ClothingItem = Daybreak_Marker_Mass,
+        BloodLocation = Head,
+        CanHaveHoles = false,
+        ChanceToFall = 0,
+    }
+}

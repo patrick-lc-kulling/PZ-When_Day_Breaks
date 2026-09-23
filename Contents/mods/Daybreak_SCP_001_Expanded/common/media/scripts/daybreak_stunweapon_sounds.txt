@@ -1,0 +1,42 @@
+/* Sounds for the electric weapons. Kept separate from scp_sounds.txt so that
+   file stays identical to the Legacy mod's copy - the weapons are Expanded
+   only. distanceMax is how far the clip itself carries; how much attention a
+   weapon draws is SoundRadius/SoundVolume on the item instead. */
+module SCP
+{
+    sound SCPCattleProdHit
+    {
+        category = Item,
+
+        clip
+        {
+            file = media/sound/cattle_prod_hit.wav,
+            distanceMax = 20,
+            volume = 1.0,
+        }
+    }
+
+    sound SCPStunGunHit
+    {
+        category = Item,
+
+        clip
+        {
+            file = media/sound/stun_gun_hit.wav,
+            distanceMax = 20,
+            volume = 1.0,
+        }
+    }
+
+    sound SCPTaserShot
+    {
+        category = Item,
+
+        clip
+        {
+            file = media/sound/taser_shot.wav,
+            distanceMax = 30,
+            volume = 1.0,
+        }
+    }
+}

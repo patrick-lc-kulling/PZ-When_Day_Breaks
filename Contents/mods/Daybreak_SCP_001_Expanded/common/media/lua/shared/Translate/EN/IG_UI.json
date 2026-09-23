@@ -1,3 +1,10 @@
 {
-    "IGUI_Daybreak_LensesDriedOut": "Your contact lenses have dried out."
+    "IGUI_Daybreak_LensesDriedOut": "Your contact lenses have dried out.",
+    "IGUI_Daybreak_StunWeaponFlat": "The battery is dead.",
+
+    "IGUI_Daybreak_HeadgearTornOff": "Something tore off your %1!",
+
+    "IGUI_AnimalType_daybreak_collective": "Great Collective",
+    "IGUI_Animal_Group_daybreak_collective": "Great Collective",
+    "IGUI_Breed_liquefied": "Liquefied"
 }

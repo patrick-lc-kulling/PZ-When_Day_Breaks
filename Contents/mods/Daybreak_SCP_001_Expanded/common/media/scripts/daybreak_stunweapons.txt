@@ -1,0 +1,295 @@
+module Base
+{
+    /* Electric stun weapons. The source material says conductive electrical
+       weapons are "partially effective at immobilizing" the liquefied, so
+       these do almost no damage - the knockdown is the weapon.
+
+       The knockdown itself is forced from Lua (see StunWeapons.lua), not from
+       AlwaysKnockdown: every vanilla user of that flag is a sledgehammer-class
+       weapon, and doing it in Lua lets the battery charge gate it.
+
+       Battery charge lives in item modData and is mirrored onto the condition
+       bar, so these deliberately carry no repairwithtape/repairwithglue tags -
+       otherwise duct tape would recharge a battery - and a firearm-grade
+       ConditionLowerChanceOneIn so ordinary wear doesn't fight the gauge. */
+
+    item Daybreak_LivestockProd
+    {
+        DisplayCategory = Weapon,
+        ItemType = base:weapon,
+        Weight = 1.2,
+        Icon = Pipe,
+        WeaponSprite = PoolCue,
+        AttachmentType = BigWeapon,
+
+        /* Reach: 1.5 sits just under the vanilla melee ceiling of 1.6 (the
+           garden hoe). MinRange stays at the universal 0.61 rather than the
+           spear's 0.98, so it still connects with a zombie already on top of
+           you - which is exactly the moment a prod is for. */
+        Categories = base:blunt,
+        SubCategory = Swinging,
+        SwingAnim = Bat,
+        MinRange = 0.61,
+        MaxRange = 1.5,
+        MinAngle = 0.8,
+        WeaponLength = 0.6,
+
+        MinDamage = 0.0,
+        MaxDamage = 0.05,
+        CriticalChance = 0.0,
+        CritDmgMultiplier = 1.0,
+        KnockdownMod = 0.0,
+        PushBackMod = 0.3,
+        KnockBackOnNoDeath = false,
+        SplatBloodOnNoDeath = false,
+        SplatNumber = 0,
+        DoorDamage = 0,
+        TreeDamage = 0,
+        MaxHitcount = 1,
+
+        Swingtime = 2.5,
+        MinimumSwingtime = 2.5,
+        SwingAmountBeforeImpact = 0.02,
+        EnduranceMod = 0.6,
+
+        ConditionMax = 20,
+        ConditionLowerChanceOneIn = 200,
+
+        IdleAnim = Idle_Weapon2,
+        RunAnim = Run_Weapon2,
+        BreakSound = LeadPipeBreak,
+        DoorHitSound = LeadPipeHit,
+        DropSound = LeadPipeDrop,
+        HitFloorSound = LeadPipeHit,
+        HitSound = SCPCattleProdHit,
+        SwingSound = LeadPipeSwing,
+
+        Tags = base:hasmetal;base:nomaintenancexp;base:showcondition;base:daybreak_usesbattery,
+    }
+
+    item Daybreak_StunGun
+    {
+        DisplayCategory = Weapon,
+        ItemType = base:weapon,
+        Weight = 0.4,
+        Icon = NightStick,
+        WeaponSprite = Nightstick,
+        AttachmentType = Nightstick,
+
+        /* Contact range - shorter than anything in vanilla except a bare fist.
+           You have to be close enough to touch the thing.
+
+           It jabs like a knife, and the engine takes that literally:
+           WeaponType.getWeaponType classifies a weapon by its SwingAnim alone,
+           "Stab" means KNIFE, and a knife attacking an unaware zombie from
+           behind gets a forced critical hit - the backstab kill.
+
+           The base:nocriticals tag below is what stops it. It is the last
+           check CombatManager.pressedAttack makes, it clears the critical hit
+           on every path including the forced one, and without a crit the
+           knife-kill animation (the only thing that sets KnifeDeath) never
+           plays. Vanilla gives the plunger spear the same tag for the same
+           reason. Never remove it while SwingAnim is Stab.
+
+           No CloseKillMove either: that is the separate gate for the jaw stab,
+           and every vanilla item that sets it is a base:smallblade. */
+        Categories = base:smallblunt,
+        SubCategory = Stab,
+        SwingAnim = Stab,
+        MinRange = 0.61,
+        MaxRange = 0.85,
+        MinAngle = 0.65,
+        WeaponLength = 0.2,
+
+        MinDamage = 0.0,
+        MaxDamage = 0.05,
+        CriticalChance = 0.0,
+        CritDmgMultiplier = 1.0,
+        KnockdownMod = 0.0,
+        PushBackMod = 0.01,
+        KnockBackOnNoDeath = false,
+        SplatBloodOnNoDeath = false,
+        SplatNumber = 0,
+        DoorDamage = 0,
+        TreeDamage = 0,
+        MaxHitcount = 1,
+
+        Swingtime = 1.6,
+        MinimumSwingtime = 1.6,
+        SwingAmountBeforeImpact = 0.02,
+        EnduranceMod = 0.6,
+
+        ConditionMax = 12,
+        ConditionLowerChanceOneIn = 200,
+
+        IdleAnim = Idle_Weapon2,
+        RunAnim = Run_Weapon2,
+        BreakSound = NightstickBreak,
+        DoorHitSound = NightstickHit,
+        DropSound = NightstickDrop,
+        HitFloorSound = NightstickHit,
+        HitSound = SCPStunGunHit,
+        SwingSound = NightstickSwing,
+
+        Tags = base:hasmetal;base:nomaintenancexp;base:showcondition;base:nocriticals;base:daybreak_usesbattery,
+    }
+
+    /* Dart taser. Built on the cap gun, the only zero-damage ranged item in
+       vanilla: one shot, then a reload. The cartridge is its own ammo type,
+       registered in media/registries.lua before scripts are parsed. */
+    item Daybreak_Taser
+    {
+        DisplayCategory = Weapon,
+        ItemType = base:weapon,
+        Weight = 0.6,
+        Icon = Pistol_Toy,
+        /* Revolver_Short rather than the cap gun's own model: that one is
+           defined in scripts/generated/TEMPORARY_TESTING_new_items, which is
+           not something to depend on across patches. */
+        WeaponSprite = Revolver_Short,
+        AttachmentType = Holster,
+
+        Ranged = true,
+        SubCategory = Firearm,
+        IsAimedFirearm = true,
+        SwingAnim = Handgun,
+        AmmoType = Daybreak:taser_cartridge,
+        MaxAmmo = 1,
+        HaveChamber = false,
+        ManuallyRemoveSpentRounds = true,
+        WeaponReloadType = revolver,
+        Reloadtime = 30,
+        JamGunChance = 0,
+        Projectilecount = 1,
+        RecoilDelay = 20,
+
+        /* Short effective range: the darts are on wires. */
+        MinRange = 0.61,
+        MaxRange = 6.0,
+        MinSightRange = 2,
+        MaxSightRange = 5.0,
+        MinAngle = 0.95,
+        Aimingtime = 30,
+        HitChance = 60,
+        AimingPerkHitChanceModifier = 5,
+        AimingPerkCritModifier = 0,
+        AimingPerkRangeModifier = 0,
+        AimingPerkMinAngleModifier = 0.05,
+        ToHitModifier = 1.5,
+
+        MinDamage = 0.0,
+        MaxDamage = 0.0,
+        CriticalChance = 0.0,
+        CritDmgMultiplier = 0.0,
+        KnockdownMod = 0.0,
+        PushBackMod = 0.3,
+        StopPower = 0.0,
+        SplatBloodOnNoDeath = false,
+        SplatNumber = 0,
+        SplatSize = 0,
+        DoorDamage = 0,
+        MaxHitcount = 1,
+        UseEndurance = false,
+
+        Swingtime = 0.5,
+        MinimumSwingtime = 0.5,
+        SwingAmountBeforeImpact = 0.0,
+
+        ConditionMax = 10,
+        ConditionLowerChanceOneIn = 200,
+
+        /* Quiet: a taser is not a gunshot, and shouldn't pull a horde. */
+        SoundRadius = 15,
+        SoundVolume = 10,
+        SoundGain = 1.0,
+        NPCSoundBoost = 1.0,
+
+        RunAnim = Run_Weapon2,
+        HitSound = null,
+        ImpactSound = null,
+        BreakSound = CapGunRevolverBreak,
+        DropSound = CapGunRevolverDrop,
+        EquipSound = CapGunRevolverEquip,
+        UnequipSound = CapGunRevolverUnequip,
+        SwingSound = SCPTaserShot,
+        ClickSound = CapGunRevolverJam,
+        BringToBearSound = CapGunRevolverBringToBear,
+        AimReleaseSound = CapGunRevolverAimRelease,
+        InsertAmmoSound = CapGunRevolverInsertAmmo,
+        InsertAmmoStartSound = CapGunRevolverInsertAmmoStart,
+        InsertAmmoStopSound = CapGunRevolverInsertAmmoStop,
+        EjectAmmoSound = CapGunRevolverEjectAmmo,
+        EjectAmmoStartSound = CapGunRevolverEjectAmmoStart,
+        EjectAmmoStopSound = CapGunRevolverEjectAmmoStop,
+
+        Tags = base:hasmetal;base:firearm;base:showcondition,
+    }
+
+    item Daybreak_TaserCartridge
+    {
+        DisplayCategory = Ammo,
+        ItemType = base:normal,
+        Weight = 0.1,
+        Icon = BerettaClip,
+        count = 1,
+        MetalValue = 1.0,
+        WorldStaticModel = Gun_Pistol_Magazine,
+        Tags = base:ammo,
+    }
+
+    item Daybreak_TaserCartridge_Spent
+    {
+        DisplayCategory = Ammo,
+        ItemType = base:normal,
+        Weight = 0.1,
+        Icon = BerettaClip,
+        MetalValue = 1.0,
+        WorldStaticModel = Gun_Pistol_Magazine,
+        Tags = base:hasmetal,
+    }
+
+    /* One recipe covers the prod and the stun gun: both carry the
+       daybreak_usesbattery tag, and tags[] is an OR. The vanilla
+       InsertBattery/RemoveBattery recipes can't be reused here - their
+       IsEmpty/NotEmpty flags read drainable uses, which a weapon has no such
+       thing as. OnTest keeps it off the menu unless there is room to charge. */
+    craftRecipe Daybreak_RechargeStunWeapon
+    {
+        timedAction = MakingElectrical,
+        time = 40,
+        AllowBatchCraft = false,
+        Tags = InHandCraft;CanBeDoneInDark,
+        category = Electrical,
+        OnTest = DaybreakStunWeapons.canRecharge,
+        OnCreate = DaybreakStunWeapons.onRecharge,
+        inputs
+        {
+            item 1 tags[base:daybreak_usesbattery] mode:keep,
+            item 1 [Base.Battery] mode:destroy,
+        }
+        outputs
+        {
+        }
+    }
+
+    craftRecipe Daybreak_RebuildTaserCartridge
+    {
+        timedAction = MakingElectrical,
+        time = 120,
+        SkillRequired = Electricity:3,
+        xpAward = Electricity:5,
+        Tags = AnySurfaceCraft,
+        category = Electrical,
+        inputs
+        {
+            item 1 tags[base:screwdriver] mode:keep flags[Prop1],
+            item 1 [Base.Daybreak_TaserCartridge_Spent] mode:destroy,
+            item 1 [Base.ElectricWire] mode:destroy,
+            item 1 [Base.Battery] mode:destroy,
+        }
+        outputs
+        {
+            item 1 Base.Daybreak_TaserCartridge,
+        }
+    }
+}

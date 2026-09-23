@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Outfits for the liquefied creature types. dressInNamedOutfit is the only
+  dressing path that reliably sticks on a zombie, and an outfit also travels in
+  the engine's own zombie sync, so clients can tell a creature's type from its
+  outfit name without any network code of ours.
+
+  PLACEHOLDER LOOK: a random top and trousers, so they still read as human, plus
+  one hard hat whose colour marks the type:
+    Conjoined = yellow, Caller = white, Grasper = red, Mass = blue.
+  Each outfit is defined for both sexes; an outfit missing from one list makes
+  the engine silently dress that sex in nothing.
+-->
+<outfitManager>
+	<m_MaleOutfits>
+		<m_Name>Daybreak_Conjoined</m_Name>
+		<m_Guid>efff036d-1cf1-413e-92ea-bd25a4227b5e</m_Guid>
+		<m_Top>true</m_Top>
+		<m_Pants>true</m_Pants>
+		<m_AllowPantsHue>true</m_AllowPantsHue>
+		<m_AllowPantsTint>true</m_AllowPantsTint>
+		<m_AllowTopTint>true</m_AllowTopTint>
+		<m_AllowTShirtDecal>true</m_AllowTShirtDecal>
+		<m_items>
+			<itemGUID>d2006cb8-d455-4449-8263-8c0114b26d88</itemGUID>
+		</m_items>
+	</m_MaleOutfits>
+	<m_MaleOutfits>
+		<m_Name>Daybreak_Caller</m_Name>
+		<m_Guid>1e02c75a-c174-4809-91c9-e04c42be1a88</m_Guid>
+		<m_Top>true</m_Top>
+		<m_Pants>true</m_Pants>
+		<m_AllowPantsHue>true</m_AllowPantsHue>
+		<m_AllowPantsTint>true</m_AllowPantsTint>
+		<m_AllowTopTint>true</m_AllowTopTint>
+		<m_AllowTShirtDecal>true</m_AllowTShirtDecal>
+		<m_items>
+			<itemGUID>afac11de-db75-4056-89ca-a3793bf733dc</itemGUID>
+		</m_items>
+	</m_MaleOutfits>
+	<m_MaleOutfits>
+		<m_Name>Daybreak_Grasper</m_Name>
+		<m_Guid>c3a0bc5c-454b-449a-8684-8a04ef99cef4</m_Guid>
+		<m_Top>true</m_Top>
+		<m_Pants>true</m_Pants>
+		<m_AllowPantsHue>true</m_AllowPantsHue>
+		<m_AllowPantsTint>true</m_AllowPantsTint>
+		<m_AllowTopTint>true</m_AllowTopTint>
+		<m_AllowTShirtDecal>true</m_AllowTShirtDecal>
+		<m_items>
+			<itemGUID>2bb2c7f1-a4d7-436e-b6cd-c4abc2b8f1c4</itemGUID>
+		</m_items>
+	</m_MaleOutfits>
+	<m_MaleOutfits>
+		<m_Name>Daybreak_Mass</m_Name>
+		<m_Guid>ffbb7787-2d2b-4386-8c38-a59ed609e4e7</m_Guid>
+		<m_Top>true</m_Top>
+		<m_Pants>true</m_Pants>
+		<m_AllowPantsHue>true</m_AllowPantsHue>
+		<m_AllowPantsTint>true</m_AllowPantsTint>
+		<m_AllowTopTint>true</m_AllowTopTint>
+		<m_AllowTShirtDecal>true</m_AllowTShirtDecal>
+		<m_items>
+			<itemGUID>5091b579-8d47-4702-a512-b2729ffd9ec4</itemGUID>
+		</m_items>
+	</m_MaleOutfits>
+	<m_FemaleOutfits>
+		<m_Name>Daybreak_Conjoined</m_Name>
+		<m_Guid>efff036d-1cf1-413e-92ea-bd25a4227b5e</m_Guid>
+		<m_Top>true</m_Top>
+		<m_Pants>true</m_Pants>
+		<m_AllowPantsHue>true</m_AllowPantsHue>
+		<m_AllowPantsTint>true</m_AllowPantsTint>
+		<m_AllowTopTint>true</m_AllowTopTint>
+		<m_AllowTShirtDecal>true</m_AllowTShirtDecal>
+		<m_items>
+			<itemGUID>d2006cb8-d455-4449-8263-8c0114b26d88</itemGUID>
+		</m_items>
+	</m_FemaleOutfits>
+	<m_FemaleOutfits>
+		<m_Name>Daybreak_Caller</m_Name>
+		<m_Guid>1e02c75a-c174-4809-91c9-e04c42be1a88</m_Guid>
+		<m_Top>true</m_Top>
+		<m_Pants>true</m_Pants>
+		<m_AllowPantsHue>true</m_AllowPantsHue>
+		<m_AllowPantsTint>true</m_AllowPantsTint>
+		<m_AllowTopTint>true</m_AllowTopTint>
+		<m_AllowTShirtDecal>true</m_AllowTShirtDecal>
+		<m_items>
+			<itemGUID>afac11de-db75-4056-89ca-a3793bf733dc</itemGUID>
+		</m_items>
+	</m_FemaleOutfits>
+	<m_FemaleOutfits>
+		<m_Name>Daybreak_Grasper</m_Name>
+		<m_Guid>c3a0bc5c-454b-449a-8684-8a04ef99cef4</m_Guid>
+		<m_Top>true</m_Top>
+		<m_Pants>true</m_Pants>
+		<m_AllowPantsHue>true</m_AllowPantsHue>
+		<m_AllowPantsTint>true</m_AllowPantsTint>
+		<m_AllowTopTint>true</m_AllowTopTint>
+		<m_AllowTShirtDecal>true</m_AllowTShirtDecal>
+		<m_items>
+			<itemGUID>2bb2c7f1-a4d7-436e-b6cd-c4abc2b8f1c4</itemGUID>
+		</m_items>
+	</m_FemaleOutfits>
+	<m_FemaleOutfits>
+		<m_Name>Daybreak_Mass</m_Name>
+		<m_Guid>ffbb7787-2d2b-4386-8c38-a59ed609e4e7</m_Guid>
+		<m_Top>true</m_Top>
+		<m_Pants>true</m_Pants>
+		<m_AllowPantsHue>true</m_AllowPantsHue>
+		<m_AllowPantsTint>true</m_AllowPantsTint>
+		<m_AllowTopTint>true</m_AllowTopTint>
+		<m_AllowTShirtDecal>true</m_AllowTShirtDecal>
+		<m_items>
+			<itemGUID>5091b579-8d47-4702-a512-b2729ffd9ec4</itemGUID>
+		</m_items>
+	</m_FemaleOutfits>
+</outfitManager>

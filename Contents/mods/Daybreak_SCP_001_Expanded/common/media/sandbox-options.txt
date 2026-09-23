@@ -59,3 +59,27 @@ option SCP.LensWearDays = {
     page = SCP,
     translation = SCP.LensWearDays,
 }
+
+option SCP.CreatureEvolutionPace = {
+    type = double, min = 0.25, max = 4.0, default = 1.0,
+    page = SCP,
+    translation = SCP.CreatureEvolutionPace,
+}
+
+option SCP.CreatureMerging = {
+    type = boolean, default = true,
+    page = SCP,
+    translation = SCP.CreatureMerging,
+}
+
+option SCP.GrasperStripChance = {
+    type = integer, min = 0, max = 100, default = 25,
+    page = SCP,
+    translation = SCP.GrasperStripChance,
+}
+
+option SCP.CollectiveMax = {
+    type = integer, min = 0, max = 10, default = 3,
+    page = SCP,
+    translation = SCP.CollectiveMax,
+}

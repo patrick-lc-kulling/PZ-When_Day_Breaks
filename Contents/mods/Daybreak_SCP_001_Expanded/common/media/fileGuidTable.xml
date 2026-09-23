@@ -4,4 +4,20 @@
 		<path>media/clothing/clothingItems/Daybreak_ContactLenses.xml</path>
 		<guid>9cb4cf90-da92-4b41-b486-05f732e296e3</guid>
 	</files>
+	<files>
+		<path>media/clothing/clothingItems/Daybreak_Marker_Conjoined.xml</path>
+		<guid>d2006cb8-d455-4449-8263-8c0114b26d88</guid>
+	</files>
+	<files>
+		<path>media/clothing/clothingItems/Daybreak_Marker_Caller.xml</path>
+		<guid>afac11de-db75-4056-89ca-a3793bf733dc</guid>
+	</files>
+	<files>
+		<path>media/clothing/clothingItems/Daybreak_Marker_Grasper.xml</path>
+		<guid>2bb2c7f1-a4d7-436e-b6cd-c4abc2b8f1c4</guid>
+	</files>
+	<files>
+		<path>media/clothing/clothingItems/Daybreak_Marker_Mass.xml</path>
+		<guid>5091b579-8d47-4702-a512-b2729ffd9ec4</guid>
+	</files>
 </fileGuidTable>

@@ -1,5 +1,16 @@
 {
     "Base.Daybreak_ContactLenses": "Contact Lenses",
     "Base.Daybreak_ContactLenses_Used": "Contact Lenses (Dried Out)",
-    "Base.Daybreak_LensSolution": "Contact Lens Solution"
+    "Base.Daybreak_LensSolution": "Contact Lens Solution",
+
+    "Base.Daybreak_LivestockProd": "Livestock Prod",
+    "Base.Daybreak_StunGun": "Stun Gun",
+    "Base.Daybreak_Taser": "Taser",
+    "Base.Daybreak_TaserCartridge": "Taser Cartridge",
+    "Base.Daybreak_TaserCartridge_Spent": "Taser Cartridge (Spent)",
+
+    "Base.Daybreak_Marker_Conjoined": "Hard Hat (Conjoined Marker)",
+    "Base.Daybreak_Marker_Caller": "Hard Hat (Caller Marker)",
+    "Base.Daybreak_Marker_Grasper": "Hard Hat (Grasper Marker)",
+    "Base.Daybreak_Marker_Mass": "Hard Hat (Mass Marker)"
 }
