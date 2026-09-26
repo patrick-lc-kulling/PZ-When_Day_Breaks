@@ -73,7 +73,28 @@ module Base
         ItemType = base:weapon,
         Weight = 0.4,
         Icon = NightStick,
-        WeaponSprite = Nightstick,
+        /* The custom model, defined in daybreak_models.txt (the Attachment
+           editor rewrites that file on save, so its notes live here).
+
+           WeaponSprite is a weapon's model in the hand; a weapon has no use
+           for StaticModel, which it only reads as an override of this.
+           WorldStaticModel is the model on the ground - a weapon without one
+           falls back to WeaponSprite, but naming it keeps the link explicit.
+
+           The model must have a texture: a character never draws a held
+           model without one, and on the ground it draws with whatever
+           texture happened to be bound last. The Attachment editor draws it
+           either way, so it can look fine there and still be invisible in
+           game. The texture is
+           media/textures/weapons/1handed/Daybreak_StunGun.png (a flat grey
+           placeholder until the painted one replaces it).
+
+           Its scale is 0.00027 because the model is 6.38 m long in the
+           .blend and the game keeps Blender's export scale of 100, in
+           metres: that makes it about 17 cm. Rebuilt at real size in
+           Blender, it would take 0.01. */
+        WeaponSprite = Daybreak_StunGun,
+        WorldStaticModel = Daybreak_StunGun,
         AttachmentType = Nightstick,
 
         /* Contact range - shorter than anything in vanilla except a bare fist.
@@ -143,10 +164,25 @@ module Base
         ItemType = base:weapon,
         Weight = 0.6,
         Icon = Pistol_Toy,
-        /* Revolver_Short rather than the cap gun's own model: that one is
-           defined in scripts/generated/TEMPORARY_TESTING_new_items, which is
-           not something to depend on across patches. */
-        WeaponSprite = Revolver_Short,
+        /* The custom model, defined in daybreak_models.txt and wired like the
+           stun gun's (see there): WeaponSprite in the hand, WorldStaticModel
+           on the ground, and a texture it cannot render without -
+           media/textures/weapons/firearm/Daybreak_Taser.png, a flat grey
+           placeholder until the painted one replaces it.
+
+           A firearm's model also needs a `muzzle` attachment: for an aimed
+           firearm, CombatManager.pressedAttack refuses to fire while the
+           held model has none (IsoGameCharacter.isRangedWeaponReady). It is
+           placed at the model's front end.
+
+           Its scale is 0.00033 for about 16 cm: the model is 4.85 m long in
+           its .blend, and the game keeps Blender's export scale of 100, in
+           metres. The game applies that scale to the vertices before the
+           object's own transform, so an object's location in Blender is not
+           scaled down with it - export with transforms applied, or an
+           offset of centimetres there becomes metres in game. */
+        WeaponSprite = Daybreak_Taser,
+        WorldStaticModel = Daybreak_Taser,
         AttachmentType = Holster,
 
         Ranged = true,
@@ -158,7 +194,7 @@ module Base
         HaveChamber = false,
         ManuallyRemoveSpentRounds = true,
         WeaponReloadType = revolver,
-        Reloadtime = 30,
+        Reloadtime = 90,
         JamGunChance = 0,
         Projectilecount = 1,
         RecoilDelay = 20,

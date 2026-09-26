@@ -12,7 +12,7 @@ DaybreakStunWeapons = DaybreakStunWeapons or {}
 
 DaybreakStunWeapons.CONFIG = {
     ["Base.Daybreak_LivestockProd"] = {
-        zombieStunSeconds = 4.0, -- how long a zombie is held on the ground
+        zombieStunSeconds = 6.0, -- how long a zombie is held on the ground
         playerStunSeconds = 1.5, -- the same for a player, in multiplayer
         maxCharge         = 20,  -- zaps per battery
         chargePerUse      = 1,   -- charge spent per connecting hit
