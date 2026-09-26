@@ -75,23 +75,58 @@ Creatures.Tuning = {
         minSize = 1.6,
         maxSize = 2.6,
 
-        -- Hunting and its hit.
-        huntRadius = 20,          -- tiles it notices a player from
-        loseRadius = 30,          -- tiles at which it gives up on one
-        repathSeconds = 2,
+        -- Turning speed. The cow's is 0.9 and no vanilla animal goes past
+        -- 0.95; higher turns tighter. Safe to raise: the engine stops the turn
+        -- exactly on target instead of overshooting.
+        turnDelta = 2.0,
+
+        -- Hunting, after the T-rex of Irish's Dinosaurs. It notices players
+        -- by range, not sight: detectRange, half that for one sneaking, and
+        -- nobody sneaking indoors out of its reach. It keeps after its prey
+        -- while they stay within keepRange x that, and goes for anyone who
+        -- hits it. Having lost them, it goes where they were and searches
+        -- round there for memorySeconds.
+        detectRange = 25,         -- tiles
+        keepRange = 1.25,
+        memorySeconds = 30,
+        searchRadius = 12,        -- tiles round where it lost them
+        arriveDistance = 1.4,     -- tiles; close enough to a spot it was heading for
+
+        -- Moving, by the engine's own pathfinding.
+        brainSeconds = 0.08,      -- how often it decides; a swing is timed every tick
+        repathSeconds = 0.2,      -- the least time between two paths after moving prey
+        retargetDistance = 0.75,  -- tiles its prey must move before it paths again
+        stuckSeconds = 1.4,       -- getting nowhere this long: a fresh path
+        pathStartGraceSeconds = 0.35,
+        memoryRepathSeconds = 0.5,
+
+        -- Fences between it and its prey: looked for along the straight line,
+        -- fenceProbeSteps grid edges out every brain step and all the way
+        -- every fenceLongProbeSeconds. It walks up to one and smashes it with
+        -- a swing. It does not break into buildings: it stays outdoors.
+        fenceProbeSteps = 4,
+        fenceLongProbeSeconds = 1.0,
+
+        -- Roaming with nothing to hunt: it stands a while, walks to a random
+        -- open spot outdoors, and stands again.
+        wanderRadiusMin = 8,      -- tiles
+        wanderRadiusMax = 25,
+        wanderIdleMinSeconds = 3,
+        wanderIdleMaxSeconds = 8,
+        wanderTimeoutSeconds = 12, -- a walk not finished by then is given up
+
+        -- Its swing: within attackStartFraction of its reach it stops, turns
+        -- and swings (the look's attack animation and timing), and the blow
+        -- lands if its prey is still within reach + reachSlack and in front.
         reach = 1.4,              -- tiles, plus reachPerSize for every 1.0 of size
         reachPerSize = 0.4,
-        attackCooldownSeconds = 3,
+        reachSlack = 0.5,
+        attackStartFraction = 0.85,
+        attackRecoverySeconds = 1.0, -- after a swing, before the next
         knockdownChance = 0.35,   -- chance a hit also knocks the player over
         knockdownCooldownSeconds = 10,
 
-        -- Barriers: a door, window, barricade, fence, or anything built or
-        -- moved into its way, breaks when it walks into it, and it staggers
-        -- for a moment. Walls of the map itself hold.
-        breakPauseSeconds = 1.0,
-        breakNoiseRadius = 25,    -- tiles creatures hear the crash from
-        stuckSeconds = 4,         -- no closer to its prey for this long: it
-                                  -- heads for the nearest breakable barrier
+        breakNoiseRadius = 25,    -- tiles creatures hear a fence go from
 
         -- Absorbing: a creature that stays this close this long is swallowed.
         absorbDistance = 1.0,     -- tiles at minSize, grows with size

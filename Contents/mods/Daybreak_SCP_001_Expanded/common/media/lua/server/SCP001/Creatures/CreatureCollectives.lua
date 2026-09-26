@@ -1,6 +1,12 @@
 -- What a Great Collective does: hunt, swallow creatures it touches, shrug off
 -- anything but fire, fall apart into Masses, and turn up in the world.
 --
+-- Its hunting follows the T-rex of Irish's Dinosaurs (Workshop 3784875732):
+-- noticed by range, chased by the engine's own pathfinding, fences smashed
+-- with a swing, attacks as timed swings, roaming between hunts, and never a
+-- step indoors. How it looks and animates is the look table in
+-- CollectiveSpecies.lua.
+--
 -- It is an animal (CollectiveSpecies.lua), and animals keep their modData and
 -- position through unloading and saving on their own, so unlike the zombie
 -- types it needs no identity bookkeeping. The small registry below only
@@ -12,12 +18,12 @@ if isClient() then return end
 
 require "SCP001/Creatures/CreatureSpawner"
 require "SCP001/Creatures/CollectiveSpecies"
-require "BuildingObjects/ISBuildUtil" -- buildUtil: double and garage door parts
 
 local Creatures = DaybreakCreatures
 local Keys = Creatures.Keys
 local Server = Creatures.Server
 local Tuning = Creatures.Tuning.collective
+local Look = Creatures.CollectiveLook
 
 local Collectives = {}
 Creatures.Collectives = Collectives
@@ -130,10 +136,11 @@ function Collectives.spawnAt(x, y, z, mass, record)
     return animal
 end
 
--- ----------------------------------------------------------------- hunting --
+-- ------------------------------------------------------------------- state --
 
--- Per-collective runtime state, by record key: its target, timers, and which
--- creatures have been touching it since when.
+-- Per-collective runtime state, by record key: what it is doing, its prey
+-- and what it remembers of them, its timers, and which creatures have been
+-- touching it since when.
 local state = {}
 
 local function stateFor(key)
@@ -165,232 +172,305 @@ local function track(animal)
     return record.key
 end
 
-local function isHuntable(player, floorZ)
-    return math.floor(player:getZ()) == floorZ and player:getVehicle() == nil
-        and not player:isGhostMode() and not player:isInvisible()
+local function isDue(last, nowMs, seconds)
+    return last == nil or nowMs - last >= seconds * 1000 or nowMs < last
 end
 
--- The nearest player it can notice, keeping its current one until they get
--- properly away.
-local function pickTarget(animal, entry, players)
-    local ax, ay = animal:getX(), animal:getY()
-    local floorZ = math.floor(animal:getZ())
-    local huntSq = Tuning.huntRadius * Tuning.huntRadius
-    local loseSq = Tuning.loseRadius * Tuning.loseRadius
-
-    local best, bestSq = nil, nil
-    for i = 1, #players do
-        local player = players[i]
-        if isHuntable(player, floorZ) then
-            local dx, dy = player:getX() - ax, player:getY() - ay
-            local distanceSq = dx * dx + dy * dy
-            local limit = player == entry.target and loseSq or huntSq
-            if distanceSq <= limit and (bestSq == nil or distanceSq < bestSq) then
-                best, bestSq = player, distanceSq
-            end
-        end
-    end
-    return best
+local function randomBetween(minValue, maxValue)
+    return minValue + ZombRandFloat(0.0, 1.0) * (maxValue - minValue)
 end
 
+-- How far its blow reaches, from its centre. It grows with its size.
 local function reachOf(animal)
     return Tuning.reach + Tuning.reachPerSize * animal:getData():getSize()
 end
 
--- ------------------------------------------------------------------ lines --
+local function isOutside(square)
+    return square ~= nil and square:isOutside()
+end
 
--- The squares a straight line from `from` towards (toX, toY) crosses, handed
--- to visit(fromSquare, toSquare) one wall-edge at a time. A diagonal step is
--- split into its two sides so no wall between them is skipped. Stops at the
--- first visit that returns something, and returns that.
-local LINE_STEP = 0.5 -- tiles; small enough never to skip a square
+local function isOpenOutdoorSquare(square)
+    return isOutside(square) and not square:isSolid() and not square:isSolidTrans()
+end
 
-local function walkLine(from, toX, toY, maxDistance, visit)
-    local previous = from:getCurrentSquare()
-    if previous == nil then return nil end
+-- --------------------------------------------------------- animation hooks --
 
-    local cell = getCell()
-    local fromX, fromY = from:getX(), from:getY()
-    local z = math.floor(from:getZ())
-    local dx, dy = toX - fromX, toY - fromY
-    local length = math.sqrt(dx * dx + dy * dy)
-    if maxDistance and length > maxDistance then
-        dx, dy = dx * maxDistance / length, dy * maxDistance / length
-        length = maxDistance
+-- The look's animation variables (CollectiveSpecies.lua). The marker lets its
+-- animset nodes tell a collective from any other animal sharing the set.
+-- Custom animation variables do not travel with an animal, so in
+-- multiplayer every client's game is told to set them too, for as long as
+-- they last (CollectiveClient.lua).
+local function setAnimation(animal, variable, on, seconds)
+    if not variable then return end
+    if on then animal:setVariable(variable, true) else animal:clearVariable(variable) end
+    if on and isServer() then
+        sendServerCommand(Creatures.MODULE, "CollectiveAction",
+            { animal = animal:getOnlineID(), variable = variable, seconds = seconds })
     end
+end
 
-    local steps = math.max(1, math.ceil(length / LINE_STEP))
-    for i = 1, steps do
-        local square = cell:getGridSquare(math.floor(fromX + dx * i / steps), math.floor(fromY + dy * i / steps), z)
-        if square == nil then return nil end
-        if square ~= previous then
-            local stepX = square:getX() - previous:getX()
-            local stepY = square:getY() - previous:getY()
-            local side = nil
-            if stepX ~= 0 and stepY ~= 0 then
-                side = cell:getGridSquare(previous:getX() + stepX, previous:getY(), z)
-            end
-            local result
-            if side then
-                result = visit(previous, side) or visit(side, square)
-            else
-                result = visit(previous, square)
-            end
+-- One-off actions with a pulse animation of their own (absorbing).
+local pulses = {}
+
+local function playAction(animal, action, nowMs)
+    local variable = Look.actions[action]
+    if not variable then return end
+    setAnimation(animal, variable, true, Look.pulseSeconds)
+    pulses[#pulses + 1] = { animal = animal, variable = variable, untilMs = nowMs + Look.pulseSeconds * 1000 }
+end
+
+local function endPulses(nowMs)
+    if #pulses == 0 then return end
+    local running = {}
+    for i = 1, #pulses do
+        local pulse = pulses[i]
+        if nowMs >= pulse.untilMs or pulse.untilMs - nowMs > Look.pulseSeconds * 1000 then
+            pulse.animal:clearVariable(pulse.variable)
+        else
+            running[#running + 1] = pulse
+        end
+    end
+    pulses = running
+end
+
+-- ---------------------------------------------------------------- movement --
+
+-- It moves the way Irish's Dinosaurs moves its T-rex: by the engine's own
+-- pathfinding, asked for a path only when the old one no longer does.
+-- Nothing of the animal's own movement is held off; its species leaves it
+-- little of its own to do (CollectiveSpecies.lua), and the brain below keeps
+-- it busy.
+local function cancelPath(animal)
+    local path = animal:getPathFindBehavior2()
+    if path then path:cancel() end
+end
+
+local function prepareToMove(animal, resetAction)
+    animal:setIgnoreMovement(false)
+    animal:getBehavior():setBlockMovement(false)
+    animal:clearVariable("sittingAnim")
+    animal:clearVariable("idleAction")
+    if not Look.canRun then animal:clearVariable("animalRunning") end
+    if resetAction then animal:getBehavior():resetBehaviorAction() end
+end
+
+local function stopMoving(animal, hard)
+    cancelPath(animal)
+    animal:clearVariable("animalRunning")
+    if hard then animal:stopAllMovementNow() end
+end
+
+local function pathToLocation(animal, x, y, z, resetAction)
+    prepareToMove(animal, resetAction)
+    animal:pathToLocation(math.floor(x), math.floor(y), math.floor(z))
+end
+
+local function pathToCharacter(animal, target, resetAction)
+    prepareToMove(animal, resetAction)
+    animal:pathToCharacter(target)
+end
+
+local function isPathMoving(animal)
+    if animal:isPathfindRunning() then return true end
+    local path = animal:getPathFindBehavior2()
+    return path ~= nil and (path:isMovingUsingPathFind() or path:shouldBeMoving() or path:hasStartedMoving())
+end
+
+local function faceToward(animal, x, y)
+    local dx, dy = x - animal:getX(), y - animal:getY()
+    local length = math.sqrt(dx * dx + dy * dy)
+    if length > 0.001 then animal:setTargetAndCurrentDirection(dx / length, dy / length) end
+end
+
+-- Being hit, knocked over or falling: the engine's own reaction plays out,
+-- and it waits.
+local function inNativeReaction(animal)
+    if animal:hasHitReaction() or animal:isKnockedDown() or animal:isFalling() or animal:isStaggerBack() then
+        return true
+    end
+    local name = string.lower(tostring(animal:getCurrentActionContextStateName() or ""))
+    return name == "hitreaction" or name == "falldown" or name == "onground"
+        or name == "death" or name == "deadbody"
+end
+
+-- ------------------------------------------------------------------- lines --
+
+-- Walks the squares a straight line from (fromX, fromY) to (toX, toY) crosses,
+-- one grid edge at a time, handing each to visit(fromSquare, toSquare). A
+-- line through a corner exactly visits both ways round, and `corner` decides.
+-- Stops at the first visit that returns something, and returns that.
+local function traverse(fromX, fromY, toX, toY, z, maxSteps, visit, corner)
+    local cell = getCell()
+    local x, y = math.floor(fromX), math.floor(fromY)
+    local endX, endY = math.floor(toX), math.floor(toY)
+    local dx, dy = toX - fromX, toY - fromY
+    if math.abs(dx) < 0.0001 and math.abs(dy) < 0.0001 then return nil end
+    local stepX = dx > 0 and 1 or (dx < 0 and -1 or 0)
+    local stepY = dy > 0 and 1 or (dy < 0 and -1 or 0)
+    local inf = math.huge
+    local tDeltaX = stepX ~= 0 and math.abs(1.0 / dx) or inf
+    local tDeltaY = stepY ~= 0 and math.abs(1.0 / dy) or inf
+    local tMaxX = stepX > 0 and ((x + 1) - fromX) / dx or (stepX < 0 and (fromX - x) / -dx or inf)
+    local tMaxY = stepY > 0 and ((y + 1) - fromY) / dy or (stepY < 0 and (fromY - y) / -dy or inf)
+
+    for _ = 1, maxSteps do
+        if x == endX and y == endY then return nil end
+        local from = cell:getGridSquare(x, y, z)
+        if from == nil then return nil end
+        if tMaxX + 0.000001 < tMaxY then
+            local to = cell:getGridSquare(x + stepX, y, z)
+            if to == nil then return nil end
+            local result = visit(from, to)
             if result then return result end
-            previous = square
+            x, tMaxX = x + stepX, tMaxX + tDeltaX
+        elseif tMaxY + 0.000001 < tMaxX then
+            local to = cell:getGridSquare(x, y + stepY, z)
+            if to == nil then return nil end
+            local result = visit(from, to)
+            if result then return result end
+            y, tMaxY = y + stepY, tMaxY + tDeltaY
+        else
+            local result = corner(from, x, y, stepX, stepY)
+            if result then return result end
+            x, y = x + stepX, y + stepY
+            tMaxX, tMaxY = tMaxX + tDeltaX, tMaxY + tDeltaY
         end
     end
     return nil
 end
 
--- A window it has already smashed or found open still blocks walking, but
--- not reaching through - and it is big enough to reach.
-local function isOpenWindowBetween(a, b)
-    local window = a:getWindowTo(b)
-    return window ~= nil and (window:isSmashed() or window:IsOpen())
+-- Can its blow reach from where it stands to (x, y)? Walls, closed doors and
+-- windows stop it; low fences do not. Past a corner, either way round will do.
+local function attackPathClear(animal, x, y)
+    local z = math.floor(animal:getZ())
+    local cell = getCell()
+    local function blocked(a, b) return a:isBlockedTo(b) end
+    local blockedAt = traverse(animal:getX(), animal:getY(), x, y, z, 64,
+        function(a, b) if blocked(a, b) then return true end return nil end,
+        function(from, fx, fy, stepX, stepY)
+            local sideX = cell:getGridSquare(fx + stepX, fy, z)
+            local sideY = cell:getGridSquare(fx, fy + stepY, z)
+            local diagonal = cell:getGridSquare(fx + stepX, fy + stepY, z)
+            if diagonal == nil then return true end
+            local viaX = sideX ~= nil and not blocked(from, sideX) and not blocked(sideX, diagonal)
+            local viaY = sideY ~= nil and not blocked(from, sideY) and not blocked(sideY, diagonal)
+            if viaX or viaY then return nil end
+            return true
+        end)
+    return blockedAt == nil
 end
 
--- Nothing solid between the two, for its hit. IsoGameCharacter:CanSee is no
--- use here - asked about one character by another, its two overloads call
--- each other until the stack overflows.
-local function hasClearLine(from, to)
-    local blocked = walkLine(from, to:getX(), to:getY(), nil, function(a, b)
-        if a:isBlockedTo(b) and not isOpenWindowBetween(a, b) then return true end
-        return nil
-    end)
-    return not blocked
-end
+-- ------------------------------------------------------------------ fences --
 
--- What stops it walking from a to b. The engine's isBlockedTo covers walls,
--- windows, doors and stairs; a fence you would hop over is not in it, but a
--- creature this size does not hop.
-local function isEdgeBlocked(a, b)
-    return a:isBlockedTo(b) or a:isHoppableTo(b)
-end
-
--- The first blocked edge between it and a point, as { a = its side, b = the
--- far side }, or nil if the way is clear within maxDistance.
-local function firstBlockedEdge(from, toX, toY, maxDistance)
-    return walkLine(from, toX, toY, maxDistance, function(a, b)
-        if isEdgeBlocked(a, b) then return { a = a, b = b } end
-        return nil
-    end)
-end
-
--- --------------------------------------------------------------- barriers --
-
--- Walking into a door, window, barricade, fence or anything built or moved
--- into its way breaks it, the way PZTheMutants' Wrecker breaks what it charges
--- into: every layer on that edge, barricade first. Walls of the map itself
--- hold. The Wrecker hands each barrier to the engine's own Thump, but Thump
--- only does damage when the thumper is a zombie, so these go through the
--- sledgehammer's route instead (ISDestroyStuffAction:complete).
-local MAX_BREAK_PASSES = 8
-
--- Which square owns the edge between two orthogonal neighbours: walls live on
--- a square's north and west edges.
-local function edgeBetween(a, b)
-    local dx, dy = b:getX() - a:getX(), b:getY() - a:getY()
-    if dx == 0 and dy == -1 then return { boundary = a, north = true, dir = IsoDirections.N } end
-    if dx == 0 and dy == 1 then return { boundary = b, north = true, dir = IsoDirections.S } end
-    if dx == -1 and dy == 0 then return { boundary = a, north = false, dir = IsoDirections.W } end
-    if dx == 1 and dy == 0 then return { boundary = b, north = false, dir = IsoDirections.E } end
-    return nil
+-- Fences are what it smashes through: low or high, the map's own or anything
+-- built. It does not break into buildings - it stays outdoors.
+local function isFenceObject(object)
+    if object == nil then return false end
+    if object:isHoppable() or object:isTallHoppable() then return true end
+    local name = object:getSpriteName()
+    if name then
+        name = string.lower(name)
+        return string.find(name, "fence", 1, true) ~= nil or string.find(name, "fencing", 1, true) ~= nil
+    end
+    return false
 end
 
 local function isOnEdge(object, north)
     local properties = object:getProperties()
     if properties == nil then return false end
     if north then
-        return properties:has(IsoFlagType.collideN) or properties:has(IsoFlagType.HoppableN)
-            or properties:has(IsoFlagType.TallHoppableN)
-    end
-    return properties:has(IsoFlagType.collideW) or properties:has(IsoFlagType.HoppableW)
-        or properties:has(IsoFlagType.TallHoppableW)
-end
-
-local function isFence(object, north)
-    local properties = object:getProperties()
-    if properties == nil then return false end
-    if north then
         return properties:has(IsoFlagType.HoppableN) or properties:has(IsoFlagType.TallHoppableN)
+            or properties:has(IsoFlagType.collideN)
     end
     return properties:has(IsoFlagType.HoppableW) or properties:has(IsoFlagType.TallHoppableW)
+        or properties:has(IsoFlagType.collideW)
 end
 
-local function isSolidBlock(object)
-    local properties = object:getProperties()
-    if properties == nil then return false end
-    return properties:has(IsoFlagType.solid) or properties:has(IsoFlagType.solidtrans)
-        or object:isMovedThumpable()
-end
-
--- Everything that could be in the way on that edge, in the Wrecker's order.
-local function barrierCandidates(a, b, edge)
-    local candidates, seen = {}, {}
-    local function add(object)
-        if object ~= nil and not seen[object] then
-            seen[object] = true
-            candidates[#candidates + 1] = object
-        end
+-- The fence on the edge between two orthogonal neighbours, if any.
+local function fenceBetween(a, b)
+    if a:getZ() ~= b:getZ() then return nil end
+    local dx, dy = b:getX() - a:getX(), b:getY() - a:getY()
+    if math.abs(dx) + math.abs(dy) ~= 1 then return nil end
+    local getters = {
+        function() return a:getHoppableTo(b) end,
+        function() return a:getWallHoppableTo(b) end,
+        function() return a:getHoppableThumpableTo(b) end,
+        function() return b:getHoppableTo(a) end,
+        function() return b:getWallHoppableTo(a) end,
+        function() return b:getHoppableThumpableTo(a) end,
+        function() return a:testCollideSpecialObjects(b) end,
+    }
+    for i = 1, #getters do
+        local ok, object = pcall(getters[i])
+        if ok and isFenceObject(object) then return object end
     end
-    add(a:getDoorTo(b))
-    add(a:getWindowTo(b))
-    add(a:getWindowThumpableTo(b))
-    add(a:getHoppableThumpableTo(b))
-    add(a:getHoppableTo(b))
-    add(edge.boundary:getThumpable(edge.north))
-    add(edge.boundary:getThumpableWall(edge.north))
-    add(edge.boundary:getHoppableWall(edge.north))
-    local objects = edge.boundary:getObjects()
+    -- Walls and fences live on a square's north and west edges: the fence
+    -- has to be on the edge being crossed, not the square's other one.
+    local owner = (dx < 0 or dy < 0) and a or b
+    local north = dy ~= 0
+    local objects = owner:getObjects()
     for i = 0, objects:size() - 1 do
         local object = objects:get(i)
-        if isOnEdge(object, edge.north) then add(object) end
+        if isFenceObject(object) and isOnEdge(object, north) then return object end
     end
-    local blocking = b:getObjects()
-    for i = 0, blocking:size() - 1 do
-        local object = blocking:get(i)
-        if isSolidBlock(object) then add(object) end
-    end
-    return candidates
+    return nil
 end
 
--- The outermost breakable thing on the edge, or nil. getThumpableFor puts a
--- barricade ahead of the door or window it covers, as vanilla does. A map
--- fence is never thumpable, so fences come last, on their climb-over flags.
-local function outermostBarrier(a, b, edge, animal)
-    local fences = BentFences.getInstance()
-    local candidates = barrierCandidates(a, b, edge)
-    for i = 1, #candidates do
-        local candidate = candidates[i]
-        if candidate:getObjectIndex() ~= -1 then
-            if fences:isBentObject(candidate) or fences:isUnbentObject(candidate, edge.dir) then
-                return candidate
+-- The first fence on the straight line from it to (x, y), within maxSteps
+-- grid edges: the fence, and the squares either side of it.
+local function fenceOnLineTo(animal, x, y, maxSteps)
+    local z = math.floor(animal:getZ())
+    local cell = getCell()
+    local found = traverse(animal:getX(), animal:getY(), x, y, z, maxSteps,
+        function(a, b)
+            local fence = fenceBetween(a, b)
+            if fence then return { fence = fence, near = a, far = b } end
+            return nil
+        end,
+        function(from, fx, fy, stepX, stepY)
+            for _, side in ipairs({ { stepX, 0 }, { 0, stepY } }) do
+                if side[1] ~= 0 or side[2] ~= 0 then
+                    local to = cell:getGridSquare(fx + side[1], fy + side[2], z)
+                    local fence = to and fenceBetween(from, to)
+                    if fence then return { fence = fence, near = from, far = to } end
+                end
             end
-            local ok, target = pcall(function() return candidate:getThumpableFor(animal) end)
-            if ok and target ~= nil then return target end
-        end
-    end
-    for i = 1, #candidates do
-        local candidate = candidates[i]
-        if candidate:getObjectIndex() ~= -1 and isFence(candidate, edge.north) then
-            return candidate
+            return nil
+        end)
+    if found then return found.fence, found.near, found.far end
+    return nil
+end
+
+-- The fence right ahead of it on its current path, if any: what it is about
+-- to walk into while roaming.
+local function fenceOnPathAhead(animal, fallbackX, fallbackY)
+    local current = animal:getCurrentSquare()
+    if current == nil then return nil end
+    local aimX, aimY = fallbackX, fallbackY
+    local path = animal:getPathFindBehavior2()
+    local ok, isSet, nextX, nextY = pcall(function() return path.pathNextIsSet, path.pathNextX, path.pathNextY end)
+    if ok and isSet and nextX and nextY then aimX, aimY = nextX, nextY end
+    local dx, dy = aimX - animal:getX(), aimY - animal:getY()
+    local stepX = dx > 0.15 and 1 or (dx < -0.15 and -1 or 0)
+    local stepY = dy > 0.15 and 1 or (dy < -0.15 and -1 or 0)
+    local steps = math.abs(dx) >= math.abs(dy) and { { stepX, 0 }, { 0, stepY } } or { { 0, stepY }, { stepX, 0 } }
+    local cell = getCell()
+    for _, step in ipairs(steps) do
+        if step[1] ~= 0 or step[2] ~= 0 then
+            local ahead = cell:getGridSquare(current:getX() + step[1], current:getY() + step[2], current:getZ())
+            local fence = ahead and fenceBetween(current, ahead)
+            if fence then return fence, current, ahead end
         end
     end
     return nil
 end
 
-local function breakSound(target)
-    local ok, sound = pcall(function()
-        if instanceof(target, "IsoThumpable") then return target:getBreakSound() end
-        return IsoThumpable.GetBreakFurnitureSound(target:getSprite())
-    end)
-    if ok then return sound end
-    return nil
+local function fenceStillStands(fence)
+    return fence ~= nil and fence:getObjectIndex() ~= -1
+        and not (instanceof(fence, "IsoThumpable") and fence:isDestroyed())
 end
 
--- Announce a break: every creature in earshot hears it, and each player's
--- game plays the crash where it happened.
+-- The crash, heard by every creature in earshot and played on every game.
 local function breakNoise(square, sound)
     local x, y, z = square:getX(), square:getY(), square:getZ()
     addSound(nil, x, y, z, Tuning.breakNoiseRadius, Tuning.breakNoiseRadius)
@@ -403,99 +483,94 @@ local function breakNoise(square, sound)
     end
 end
 
-local function removeObject(object)
-    local square = object:getSquare()
-    if square then square:transmitRemoveItemFromSquare(object) end
-end
-
--- Break one barrier. Fences are bent, then smashed, as a car does. A window
--- is smashed and its frame stays. Anything else is removed outright, a double
--- or garage door together with its other parts, contents dumped on the floor.
-local function breakOne(target, edge)
-    local fences = BentFences.getInstance()
-    if fences:isBentObject(target) then
-        fences:smashFence(target, edge.dir)
-        return
-    end
-    if fences:isUnbentObject(target, edge.dir) then
-        fences:bendFence(target, edge.dir)
-        return
-    end
-    if instanceof(target, "IsoWindow") then
-        if not target:isSmashed() then target:smashWindow() end
-        return
-    end
-
-    local square = target:getSquare()
-    local sound = breakSound(target)
-    local parts = nil
-    local ok, doubleDoor = pcall(buildUtil.getDoubleDoorObjects, target)
-    if ok and doubleDoor and #doubleDoor > 0 then parts = doubleDoor end
-    local ok2, garageDoor = pcall(buildUtil.getGarageDoorObjects, target)
-    if parts == nil and ok2 and garageDoor and #garageDoor > 0 then parts = garageDoor end
-
-    pcall(function() target:dumpContentsInSquare() end)
-    if parts then
-        for i = 1, #parts do removeObject(parts[i]) end
-    else
-        removeObject(target)
-    end
-    if square then breakNoise(square, sound) end
-end
-
--- Break everything on the edge between a and b. True if anything broke.
-local function breakThrough(a, b, animal)
-    local edge = edgeBetween(a, b)
-    if edge == nil then return false end
-
-    local broke = false
-    for _ = 1, MAX_BREAK_PASSES do
-        local target = outermostBarrier(a, b, edge, animal)
-        if target == nil then break end
-        local ok, err = pcall(breakOne, target, edge)
-        if not ok then
-            log("could not break %s: %s", tostring(target), tostring(err))
-            break
-        end
-        broke = true
-        -- A smashed window is as broken as it gets; the same thing coming
-        -- back means no progress, so stop rather than spin.
-        if outermostBarrier(a, b, edge, animal) == target then break end
-    end
-    return broke
-end
-
-local function isBreakable(a, b, animal)
-    local edge = edgeBetween(a, b)
-    return edge ~= nil and outermostBarrier(a, b, edge, animal) ~= nil
-end
-
--- The square it is facing, if a wall edge is in between: what it has walked
--- into, when its path led it somewhere the straight line did not.
-local function edgeAhead(animal)
-    local square = animal:getCurrentSquare()
-    local direction = animal:getDir()
-    if square == nil or direction == nil then return nil end
-    if direction:dx() ~= 0 and direction:dy() ~= 0 then return nil end
-    local ahead = square:getAdjacentSquare(direction)
-    if ahead and isEdgeBlocked(square, ahead) then return { a = square, b = ahead } end
+local function fenceSound(fence)
+    local ok, sound = pcall(function()
+        if instanceof(fence, "IsoThumpable") then return fence:getBreakSound() end
+        return IsoThumpable.GetBreakFurnitureSound(fence:getSprite())
+    end)
+    if ok then return sound end
     return nil
 end
 
--- ----------------------------------------------------------------- hunting --
+-- Gone: taken off the map outright, the way the T-rex does it.
+local function destroyFence(animal, fence)
+    if not fenceStillStands(fence) then return true end
+    local square = fence:getSquare()
+    local sound = fenceSound(fence)
+
+    if instanceof(fence, "IsoThumpable") then
+        pcall(function()
+            fence:setHealth(0)
+            fence:destroy()
+        end)
+    elseif fence:isHoppable() or fence:isTallHoppable() then
+        pcall(function()
+            if isServer() then square:transmitRemoveItemFromSquare(fence) else square:RemoveTileObject(fence) end
+            square:RecalcAllWithNeighbours(true)
+        end)
+    end
+    if fenceStillStands(fence) then
+        pcall(function()
+            fence:destroyFence(animal:getDir())
+            if square then square:RecalcAllWithNeighbours(true) end
+        end)
+    end
+    if fenceStillStands(fence) then
+        pcall(function()
+            fence:Damage(327670.0)
+            fence:Thump(animal, 1)
+        end)
+    end
+    if square then breakNoise(square, sound) end
+    return not fenceStillStands(fence)
+end
+
+-- ----------------------------------------------------------------- attacks --
+
+-- Its swing, used on players and on fences alike: it stops, turns, and plays
+-- the look's attack animation; the blow lands at impactSeconds and the swing
+-- ends at durationSeconds. While it swings it neither moves nor turns away.
+local function beginSwing(animal, entry, nowMs, swing)
+    stopMoving(animal, true)
+    entry.pursuit, entry.fenceRoute = nil, nil
+    animal:setIgnoreMovement(true)
+    animal:getBehavior():setBlockMovement(true)
+    faceToward(animal, swing.faceX, swing.faceY)
+    setAnimation(animal, Look.attack.variable, true, Look.attack.durationSeconds)
+    swing.impactMs = nowMs + Look.attack.impactSeconds * 1000
+    swing.endsMs = nowMs + Look.attack.durationSeconds * 1000
+    swing.impacted = false
+    entry.swing = swing
+end
+
+local function endSwing(animal, entry, nowMs)
+    local swing = entry.swing
+    entry.swing = nil
+    animal:clearVariable(Look.attack.variable)
+    animal:setIgnoreMovement(false)
+    animal:getBehavior():setBlockMovement(false)
+    if swing and swing.kind == "player" then
+        entry.attackReadyMs = nowMs + Tuning.attackRecoverySeconds * 1000
+    end
+    -- Smashed a fence on a walk: on with the walk.
+    local wander = entry.wander
+    if wander and wander.mode == "walking" then
+        pathToLocation(animal, wander.targetX, wander.targetY, animal:getZ(), true)
+        wander.startedMs = nowMs
+        wander.timeoutMs = nowMs + Tuning.wanderTimeoutSeconds * 1000
+    end
+end
 
 -- The hit is the engine's own animal attack (IsoPlayer.hitConsequences with
 -- an animal as the attacker: a wound from the species' damage), applied on
 -- the victim's own game. See Creatures.applyCollectiveHit.
 local function strike(animal, player, entry, nowMs)
     local knockdown = false
-    local lastKnockdown = entry.lastKnockdownMs
-    if (lastKnockdown == nil or nowMs - lastKnockdown >= Tuning.knockdownCooldownSeconds * 1000 or nowMs < lastKnockdown)
+    if isDue(entry.lastKnockdownMs, nowMs, Tuning.knockdownCooldownSeconds)
         and ZombRandFloat(0.0, 1.0) < Tuning.knockdownChance then
         knockdown = true
         entry.lastKnockdownMs = nowMs
     end
-
     if isServer() then
         sendServerCommand(player, Creatures.MODULE, "CollectiveHit",
             { animal = animal:getOnlineID(), knockdown = knockdown })
@@ -504,79 +579,458 @@ local function strike(animal, player, entry, nowMs)
     end
 end
 
-local function isDue(last, nowMs, seconds)
-    return last == nil or nowMs - last >= seconds * 1000 or nowMs < last
+-- Did the blow land on them? Still within reach, still in front of it, and
+-- nothing solid in the way.
+local function blowLands(animal, swing, player)
+    if player:isDead() or math.floor(player:getZ()) ~= math.floor(animal:getZ()) then return false end
+    local dx, dy = player:getX() - animal:getX(), player:getY() - animal:getY()
+    local distance = math.sqrt(dx * dx + dy * dy)
+    if distance > reachOf(animal) + Tuning.reachSlack then return false end
+    if distance > 0.05 and (dx * swing.forwardX + dy * swing.forwardY) / distance < 0.25 then return false end
+    return attackPathClear(animal, player:getX(), player:getY())
 end
 
-local function hunt(animal, entry, players, nowMs)
-    local target = pickTarget(animal, entry, players)
-    entry.target = target
-    if target == nil then
-        entry.approach = nil
-        entry.bestDistance = nil
-        return
-    end
-    -- Staggered by the last thing it broke.
-    if entry.pauseUntilMs and nowMs < entry.pauseUntilMs then return end
-
-    local reach = reachOf(animal)
-    local targetX, targetY = target:getX(), target:getY()
-
-    -- Whatever breakable stands between it and its prey within reach, or
-    -- right in front of it, goes - and it staggers for a moment.
-    local edge = firstBlockedEdge(animal, targetX, targetY, reach) or edgeAhead(animal)
-    if edge and breakThrough(edge.a, edge.b, animal) then
-        animal:stopAllMovementNow()
-        entry.pauseUntilMs = nowMs + Tuning.breakPauseSeconds * 1000
-        entry.approach = nil
-        entry.bestDistance = nil
-        return
-    end
-
-    local dx, dy = targetX - animal:getX(), targetY - animal:getY()
-    local distance = math.sqrt(dx * dx + dy * dy)
-    if distance <= reach then
-        animal:faceThisObject(target)
-        -- It looms over a downed player instead of beating them on the floor:
-        -- getting up is the chance to run.
-        if target:isOnFloor() then return end
-        if isDue(entry.lastAttackMs, nowMs, Tuning.attackCooldownSeconds) and hasClearLine(animal, target) then
-            entry.lastAttackMs = nowMs
-            animal:stopAllMovementNow()
-            strike(animal, target, entry, nowMs)
+-- Every tick while it swings: keep facing, land the blow, finish.
+local function processSwing(animal, entry, nowMs)
+    local swing = entry.swing
+    faceToward(animal, swing.faceX, swing.faceY)
+    if not swing.impacted and nowMs >= swing.impactMs then
+        swing.impacted = true
+        if swing.kind == "player" then
+            if blowLands(animal, swing, swing.target) then strike(animal, swing.target, entry, nowMs) end
+        else
+            destroyFence(animal, swing.fence)
         end
+    end
+    if nowMs >= swing.endsMs then endSwing(animal, entry, nowMs) end
+end
+
+local function beginPlayerAttack(animal, entry, player, nowMs)
+    local dx, dy = player:getX() - animal:getX(), player:getY() - animal:getY()
+    local length = math.max(0.001, math.sqrt(dx * dx + dy * dy))
+    beginSwing(animal, entry, nowMs, {
+        kind = "player", target = player,
+        faceX = player:getX(), faceY = player:getY(),
+        forwardX = dx / length, forwardY = dy / length,
+    })
+end
+
+local function beginFenceAttack(animal, entry, fence, far, nowMs)
+    beginSwing(animal, entry, nowMs, {
+        kind = "fence", fence = fence,
+        faceX = far:getX() + 0.5, faceY = far:getY() + 0.5,
+    })
+end
+
+-- The middle of the edge between the squares either side of a fence.
+local function fenceFace(near, far)
+    return (near:getX() + far:getX()) / 2 + 0.5, (near:getY() + far:getY()) / 2 + 0.5
+end
+
+local function withinFenceReach(animal, near, far)
+    local fx, fy = fenceFace(near, far)
+    local dx, dy = animal:getX() - fx, animal:getY() - fy
+    return dx * dx + dy * dy <= reachOf(animal) * reachOf(animal)
+end
+
+-- ----------------------------------------------------------------- pursuit --
+
+-- After the T-rex: a path to its prey, asked for again only when they have
+-- moved retargetDistance since, or it has been getting nowhere for
+-- stuckSeconds - never more often than every repathSeconds.
+local function issuePursuit(animal, entry, player, nowMs, resetAction)
+    pathToCharacter(animal, player, resetAction)
+    entry.wander = nil
+    entry.pursuit = {
+        kind = "chase", target = player,
+        targetX = player:getX(), targetY = player:getY(),
+        nextRepathMs = nowMs + Tuning.repathSeconds * 1000,
+        startedMs = nowMs, startedMoving = false,
+        lastX = animal:getX(), lastY = animal:getY(), lastProgressMs = nowMs,
+    }
+end
+
+local function servicePursuit(animal, entry, player, nowMs)
+    local info = entry.pursuit
+    if info == nil or info.kind ~= "chase" or info.target ~= player then
+        issuePursuit(animal, entry, player, nowMs, true)
         return
     end
+    local ax, ay = animal:getX(), animal:getY()
+    local mx, my = ax - info.lastX, ay - info.lastY
+    if mx * mx + my * my >= 0.0625 then
+        info.lastX, info.lastY, info.lastProgressMs = ax, ay, nowMs
+        info.startedMoving = true
+    end
+    if nowMs < info.nextRepathMs then return end
+    info.nextRepathMs = nowMs + Tuning.repathSeconds * 1000
 
-    -- Getting nowhere - the pathfinder will not route an animal through a
-    -- closed door - so head for the first breakable barrier on the straight
-    -- line to its prey and go through that instead.
-    if entry.bestDistance == nil or distance < entry.bestDistance - 1 then
-        entry.bestDistance = distance
-        entry.progressMs = nowMs
-    elseif isDue(entry.progressMs, nowMs, Tuning.stuckSeconds) then
-        entry.progressMs = nowMs
-        entry.bestDistance = distance
-        local blocked = firstBlockedEdge(animal, targetX, targetY, nil)
-        if blocked and isBreakable(blocked.a, blocked.b, animal) then
-            entry.approach = { x = blocked.a:getX(), y = blocked.a:getY(), z = blocked.a:getZ() }
-            entry.lastPathMs = nowMs
-            animal:pathToLocation(entry.approach.x, entry.approach.y, entry.approach.z)
+    if nowMs - info.lastProgressMs >= Tuning.stuckSeconds * 1000 then
+        issuePursuit(animal, entry, player, nowMs, true)
+        return
+    end
+    local tx, ty = player:getX() - info.targetX, player:getY() - info.targetY
+    if tx * tx + ty * ty < Tuning.retargetDistance * Tuning.retargetDistance then return end
+    if not info.startedMoving and nowMs - info.startedMs < Tuning.pathStartGraceSeconds * 1000 then return end
+    issuePursuit(animal, entry, player, nowMs, false)
+end
+
+-- ------------------------------------------------------------------ memory --
+
+-- What it remembers of its prey: where they were when it last knew, for
+-- memorySeconds. Out of range it goes there, then searches round the spot.
+local function rememberPlayer(entry, player, nowMs)
+    entry.memory = {
+        target = player,
+        originX = player:getX(), originY = player:getY(),
+        x = player:getX(), y = player:getY(), z = math.floor(player:getZ()),
+        expiresMs = nowMs + Tuning.memorySeconds * 1000,
+    }
+end
+
+local function memoryValid(entry, animal, nowMs)
+    local memory = entry.memory
+    return memory ~= nil and memory.z == math.floor(animal:getZ()) and nowMs < memory.expiresMs
+end
+
+-- The next spot of its search: somewhere open outdoors round where it last
+-- knew them.
+local function advanceSearch(memory, animal)
+    local cell = getCell()
+    for _ = 1, 12 do
+        local angle = ZombRandFloat(0, math.pi * 2)
+        local distance = randomBetween(2.0, Tuning.searchRadius)
+        local x = math.floor(memory.originX + math.cos(angle) * distance)
+        local y = math.floor(memory.originY + math.sin(angle) * distance)
+        if isOpenOutdoorSquare(cell:getGridSquare(x, y, memory.z)) then
+            memory.x, memory.y = x, y
+            return true
+        end
+    end
+    return false
+end
+
+local function issueMemoryPursuit(animal, entry, nowMs, resetAction)
+    local memory = entry.memory
+    pathToLocation(animal, memory.x, memory.y, memory.z, resetAction)
+    entry.wander = nil
+    entry.pursuit = { kind = "memory", nextRepathMs = nowMs + Tuning.memoryRepathSeconds * 1000 }
+end
+
+-- True while it is still going after what it remembers.
+local function serviceLastKnown(animal, entry, nowMs)
+    if not memoryValid(entry, animal, nowMs) then
+        entry.memory = nil
+        if entry.pursuit and entry.pursuit.kind == "memory" then entry.pursuit = nil end
+        return false
+    end
+    local memory = entry.memory
+    local dx, dy = animal:getX() - memory.x, animal:getY() - memory.y
+    if dx * dx + dy * dy <= Tuning.arriveDistance * Tuning.arriveDistance then
+        if advanceSearch(memory, animal) then
+            issueMemoryPursuit(animal, entry, nowMs, true)
+            return true
+        end
+        entry.memory, entry.pursuit = nil, nil
+        stopMoving(animal, true)
+        return false
+    end
+    local info = entry.pursuit
+    if info == nil or info.kind ~= "memory" then
+        issueMemoryPursuit(animal, entry, nowMs, true)
+    elseif nowMs >= info.nextRepathMs then
+        issueMemoryPursuit(animal, entry, nowMs, false)
+    end
+    return true
+end
+
+-- ------------------------------------------------------------------ roaming --
+
+-- With nothing to hunt it roams, as the T-rex does: an idle stand, then a
+-- walk to a random open spot outdoors, then another stand. A fence on its
+-- way gets smashed.
+local function beginIdle(animal, entry, nowMs)
+    stopMoving(animal, true)
+    animal:setIgnoreMovement(false)
+    animal:getBehavior():setBlockMovement(false)
+    animal:getBehavior():resetBehaviorAction()
+    animal:clearVariable("idleAction")
+    entry.wander = {
+        mode = "idle",
+        untilMs = nowMs + randomBetween(Tuning.wanderIdleMinSeconds, Tuning.wanderIdleMaxSeconds) * 1000,
+    }
+end
+
+local function beginWander(animal, entry, nowMs, continuous)
+    local cell = getCell()
+    local z = math.floor(animal:getZ())
+    for _ = 1, 10 do
+        local angle = ZombRandFloat(0, math.pi * 2)
+        local radius = randomBetween(Tuning.wanderRadiusMin, Tuning.wanderRadiusMax)
+        local x = math.floor(animal:getX() + math.cos(angle) * radius)
+        local y = math.floor(animal:getY() + math.sin(angle) * radius)
+        if isOpenOutdoorSquare(cell:getGridSquare(x, y, z)) then
+            pathToLocation(animal, x, y, z, true)
+            entry.pursuit = nil
+            entry.wander = {
+                mode = "walking", continuous = continuous == true,
+                targetX = x, targetY = y,
+                startedMs = nowMs, timeoutMs = nowMs + Tuning.wanderTimeoutSeconds * 1000,
+            }
             return
         end
     end
+    if continuous then
+        entry.wander = { mode = "retry", continuous = true, untilMs = nowMs + 500 }
+    else
+        beginIdle(animal, entry, nowMs)
+    end
+end
 
-    local approach = entry.approach
-    if approach then
-        local ax, ay = approach.x + 0.5 - animal:getX(), approach.y + 0.5 - animal:getY()
-        if ax * ax + ay * ay > 1.5 * 1.5 then return end
-        entry.approach = nil -- arrived; the break check above takes it from here
+-- Would its next step on the path take it indoors?
+local function nextStepIndoors(animal)
+    local current = animal:getCurrentSquare()
+    if not isOutside(current) then return true end
+    local future = animal:getFuturWalkedSquare()
+    if future and future ~= current and not isOutside(future) then return true end
+    local path = animal:getPathFindBehavior2()
+    local ok, isSet, nextX, nextY = pcall(function() return path.pathNextIsSet, path.pathNextX, path.pathNextY end)
+    if ok and isSet and nextX and nextY then
+        local square = getCell():getGridSquare(math.floor(nextX), math.floor(nextY), current:getZ())
+        if square and not isOutside(square) then return true end
+    end
+    return false
+end
+
+-- `continuous`: walk after walk without standing about - its prowl round a
+-- building its prey is hiding in.
+local function serviceWander(animal, entry, nowMs, continuous)
+    local info = entry.wander
+    if info == nil then
+        if continuous then beginWander(animal, entry, nowMs, true) else beginIdle(animal, entry, nowMs) end
+        return
+    end
+    if info.mode == "idle" or info.mode == "retry" then
+        if nowMs >= info.untilMs or (continuous and info.mode == "idle") then
+            beginWander(animal, entry, nowMs, continuous or info.continuous)
+        end
+        return
     end
 
-    if isDue(entry.lastPathMs, nowMs, Tuning.repathSeconds) then
-        entry.lastPathMs = nowMs
-        animal:pathToCharacter(target)
+    local keepMoving = continuous or info.continuous
+    local function moveOn()
+        if keepMoving then beginWander(animal, entry, nowMs, true) else beginIdle(animal, entry, nowMs) end
     end
+    if not Look.canRun then animal:clearVariable("animalRunning") end
+
+    if nextStepIndoors(animal) then
+        cancelPath(animal)
+        moveOn()
+        return
+    end
+    local fence, near, far = fenceOnPathAhead(animal, info.targetX, info.targetY)
+    if fence then
+        beginFenceAttack(animal, entry, fence, far, nowMs)
+        return
+    end
+    local dx, dy = animal:getX() - info.targetX, animal:getY() - info.targetY
+    if dx * dx + dy * dy <= Tuning.arriveDistance * Tuning.arriveDistance or nowMs >= info.timeoutMs then
+        moveOn()
+        return
+    end
+    if nowMs >= info.startedMs + Tuning.pathStartGraceSeconds * 1000 and not isPathMoving(animal) then
+        moveOn()
+    end
+end
+
+-- -------------------------------------------------------------- outdoors --
+
+-- It stays outdoors. Having strayed in, it heads back out the way it came.
+local function keepOutdoors(animal, entry)
+    local current = animal:getCurrentSquare()
+    if isOutside(current) then
+        entry.lastOutside = { x = animal:getX(), y = animal:getY(), z = animal:getZ() }
+        return false
+    end
+    entry.pursuit, entry.wander, entry.fenceRoute = nil, nil, nil
+    if isPathMoving(animal) and not isDue(entry.outdoorPathMs, getTimestampMs(), 1.0) then return true end
+    entry.outdoorPathMs = getTimestampMs()
+    local target = entry.lastOutside
+    if target == nil then
+        local cell = getCell()
+        for radius = 1, 8 do
+            for dx = -radius, radius do
+                for dy = -radius, radius do
+                    if target == nil and (math.abs(dx) == radius or math.abs(dy) == radius) then
+                        local square = cell:getGridSquare(current:getX() + dx, current:getY() + dy, current:getZ())
+                        if isOpenOutdoorSquare(square) then target = { x = square:getX(), y = square:getY(), z = square:getZ() } end
+                    end
+                end
+            end
+        end
+    end
+    if target then pathToLocation(animal, target.x, target.y, target.z, true) else stopMoving(animal, true) end
+    return true
+end
+
+-- ---------------------------------------------------------------- targets --
+
+local function isHuntable(player, animal)
+    return not player:isDead() and math.floor(player:getZ()) == math.floor(animal:getZ())
+        and player:getVehicle() == nil and not player:isGhostMode() and not player:isInvisible()
+end
+
+-- How far it notices this player from: detectRange, half that for one
+-- sneaking. Sneaking indoors out of its reach, they are hidden from it.
+local function noticeRange(animal, player)
+    local range = Tuning.detectRange
+    if player:isSneaking() then
+        if player:isInARoom() and isOutside(animal:getCurrentSquare())
+            and not attackPathClear(animal, player:getX(), player:getY()) then
+            return 0
+        end
+        range = range * 0.5
+    end
+    return range
+end
+
+local function distanceTo(animal, player)
+    local dx, dy = player:getX() - animal:getX(), player:getY() - animal:getY()
+    return math.sqrt(dx * dx + dy * dy)
+end
+
+-- The player it hunts: the nearest it notices, though it keeps after its
+-- current prey while they stay within keepRange of what it noticed them from
+-- and nobody else is much nearer.
+local function chooseTarget(animal, entry, players)
+    local best, bestDistance = nil, math.huge
+    for i = 1, #players do
+        local player = players[i]
+        if isHuntable(player, animal) then
+            local distance = distanceTo(animal, player)
+            if distance < noticeRange(animal, player) and distance < bestDistance then
+                best, bestDistance = player, distance
+            end
+        end
+    end
+    local current = entry.target
+    if current and current ~= best and isHuntable(current, animal) then
+        local distance = distanceTo(animal, current)
+        if distance <= noticeRange(animal, current) * Tuning.keepRange and distance <= bestDistance * 1.35 then
+            return current, distance
+        end
+    end
+    return best, bestDistance
+end
+
+-- --------------------------------------------------------------- hunting --
+
+-- Heading for a fence between it and its prey: re-asked every repathSeconds,
+-- and smashed once within reach.
+local function serviceFenceRoute(animal, entry, player, nowMs)
+    local route = entry.fenceRoute
+    if route == nil then return false end
+    if route.target ~= player or not fenceStillStands(route.fence) then
+        entry.fenceRoute = nil
+        return false
+    end
+    if withinFenceReach(animal, route.near, route.far) then
+        beginFenceAttack(animal, entry, route.fence, route.far, nowMs)
+        return true
+    end
+    if nowMs >= route.nextRepathMs then
+        route.nextRepathMs = nowMs + Tuning.repathSeconds * 1000
+        pathToLocation(animal, route.near:getX(), route.near:getY(), route.near:getZ(), true)
+    end
+    return true
+end
+
+local function huntPlayer(animal, entry, player, distance, nowMs)
+    rememberPlayer(entry, player, nowMs)
+
+    -- Indoors, out of its reach: it prowls round outside.
+    if not isOutside(player:getCurrentSquare()) then
+        entry.pursuit, entry.fenceRoute = nil, nil
+        if entry.indoorPlayer ~= player then
+            entry.indoorPlayer = player
+            beginIdle(animal, entry, nowMs)
+        end
+        serviceWander(animal, entry, nowMs, true)
+        return
+    end
+    entry.indoorPlayer = nil
+    if entry.wander then entry.wander = nil end
+
+    if serviceFenceRoute(animal, entry, player, nowMs) then return end
+
+    -- A fence on the straight line to its prey: straight at it, and through.
+    local fence, near, far = fenceOnLineTo(animal, player:getX(), player:getY(), Tuning.fenceProbeSteps)
+    if fence == nil and isDue(entry.longFenceProbeMs, nowMs, Tuning.fenceLongProbeSeconds) then
+        entry.longFenceProbeMs = nowMs
+        fence, near, far = fenceOnLineTo(animal, player:getX(), player:getY(), 256)
+    end
+    if fence then
+        if withinFenceReach(animal, near, far) then
+            beginFenceAttack(animal, entry, fence, far, nowMs)
+        else
+            entry.pursuit = nil
+            entry.fenceRoute = {
+                target = player, fence = fence, near = near, far = far,
+                nextRepathMs = nowMs + Tuning.repathSeconds * 1000,
+            }
+            pathToLocation(animal, near:getX(), near:getY(), near:getZ(), true)
+        end
+        return
+    end
+
+    if distance <= reachOf(animal) * Tuning.attackStartFraction
+        and nowMs >= (entry.attackReadyMs or 0)
+        and not player:isOnFloor()
+        and attackPathClear(animal, player:getX(), player:getY()) then
+        beginPlayerAttack(animal, entry, player, nowMs)
+        return
+    end
+    -- Looming over a downed player instead of beating them on the floor:
+    -- getting up is the chance to run.
+    if player:isOnFloor() and distance <= reachOf(animal) then
+        stopMoving(animal, false)
+        entry.pursuit = nil
+        faceToward(animal, player:getX(), player:getY())
+        return
+    end
+    servicePursuit(animal, entry, player, nowMs)
+end
+
+-- One collective, every brain step.
+local function think(animal, entry, players, nowMs)
+    if keepOutdoors(animal, entry) then return end
+
+    local target, distance = chooseTarget(animal, entry, players)
+    entry.target = target
+    if target then
+        huntPlayer(animal, entry, target, distance, nowMs)
+        return
+    end
+    entry.indoorPlayer, entry.fenceRoute = nil, nil
+    if serviceLastKnown(animal, entry, nowMs) then
+        entry.wander = nil
+        return
+    end
+    if entry.pursuit then
+        stopMoving(animal, false)
+        entry.pursuit = nil
+    end
+    serviceWander(animal, entry, nowMs, false)
+end
+
+-- Being hit starts the engine's own reaction; whatever it was doing, bar a
+-- swing already under way, is dropped until that is over.
+local function releaseForReaction(animal, entry)
+    if entry.pursuit or entry.wander or entry.fenceRoute then cancelPath(animal) end
+    entry.pursuit, entry.wander, entry.fenceRoute = nil, nil, nil
+    animal:clearVariable("animalRunning")
+    animal:setIgnoreMovement(false)
+    animal:getBehavior():setBlockMovement(false)
 end
 
 -- -------------------------------------------------------------- absorbing --
@@ -621,6 +1075,7 @@ local function absorb(animal, entry, zombies, nowMs)
 
     animal:getModData()[Keys.collectiveMass] = math.min(Tuning.maxMass, mass + (def and def.mass or 1))
     Creatures.applyCollectiveSize(animal)
+    playAction(animal, "absorb", nowMs)
     if isServer() then animal:transmitModData() end
 end
 
@@ -636,6 +1091,11 @@ local function onWeaponHitCharacter(wielder, target, weapon, damage)
     if not Creatures.isCollective(target) then return end
     local key = target:getModData()[Keys.collectiveId]
     if key then healthBeforeHit[key] = target:getHealth() end
+    -- Whoever hits it, it knows where they are - a shot from beyond its
+    -- notice included - and goes for them.
+    if key and wielder and instanceof(wielder, "IsoPlayer") and not instanceof(wielder, "IsoAnimal") then
+        rememberPlayer(stateFor(key), wielder, getTimestampMs())
+    end
 end
 Events.OnWeaponHitCharacter.Add(onWeaponHitCharacter)
 
@@ -791,77 +1251,71 @@ local function materialize(players)
     end
 end
 
--- ------------------------------------------------------------------ sweep --
+-- ------------------------------------------------------------- controller --
 
--- An animal runs from any zombie within six tiles (BaseAnimalBehavior.spotted,
--- whatever its fleeZombies says) and from anything but a player that hits it
--- (fleeFromAttacker). A Collective runs from nothing. Both kinds of flight
--- start a path to a location - its own paths are to a character, or to the
--- barrier it is heading for - so any other location path is cancelled the
--- tick it starts: back onto its prey if it has one, otherwise it stays put.
-local loaded = {}
+-- After the T-rex's controller: the brain decides every brainSeconds; a
+-- swing under way is timed every tick; the bookkeeping runs every second.
+local loaded = {} -- record key -> animal, refreshed every brain step
 
-local function isOurPath(entry, path)
-    local approach = entry and entry.approach
-    if approach == nil then return false end
-    return math.abs(path:getTargetX() - (approach.x + 0.5)) < 1.5
-        and math.abs(path:getTargetY() - (approach.y + 0.5)) < 1.5
-end
-
-local function holdCourse(nowMs)
-    for key, animal in pairs(loaded) do
-        if animal:isDead() or animal:getCurrentSquare() == nil then
-            loaded[key] = nil
-        else
-            local attacker = animal:getAttackedBy()
-            if attacker and (instanceof(attacker, "IsoAnimal") or not instanceof(attacker, "IsoPlayer")) then
-                animal:setAttackedBy(nil)
-            end
-
-            local path = animal:getPathFindBehavior2()
-            if path and path:isMovingUsingPathFind() and path:isGoalLocation() then
-                local entry = state[key]
-                if not isOurPath(entry, path) then
-                    local paused = entry and entry.pauseUntilMs and nowMs < entry.pauseUntilMs
-                    if entry and entry.target and not paused then
-                        entry.lastPathMs = nowMs
-                        animal:pathToCharacter(entry.target)
-                    else
-                        animal:stopAllMovementNow()
-                    end
-                end
-            end
-        end
-    end
-end
-
-local function sweep(nowMs)
-    local cell = getCell()
-    if cell == nil then return end
+local function refreshLoaded()
     loaded = {}
-
-    local players = livingPlayers()
-    local animals = cell:getAnimals()
-    local zombies = cell:getZombieList()
-    if animals then
-        for i = 0, animals:size() - 1 do
-            local animal = animals:get(i)
-            if Creatures.isCollective(animal) and not animal:isDead() then
-                local key = track(animal)
-                local entry = stateFor(key)
-                loaded[key] = animal
-                -- Zombies close by drive an animal's stress up; nothing frightens it.
-                animal:setDebugStress(0)
-                Creatures.applyCollectiveSize(animal)
-                hunt(animal, entry, players, nowMs)
-                if zombies then absorb(animal, entry, zombies, nowMs) end
-            end
+    local cell = getCell()
+    local animals = cell and cell:getAnimals()
+    if animals == nil then return end
+    for i = 0, animals:size() - 1 do
+        local animal = animals:get(i)
+        if Creatures.isCollective(animal) and not animal:isDead() and animal:getCurrentSquare() ~= nil then
+            loaded[track(animal)] = animal
         end
     end
-    materialize(players)
 end
 
+local function service(animal, entry, players, nowMs, runBrain)
+    -- The model has no run, so neither may the placeholder: whatever
+    -- vanilla starts it running for, it walks.
+    if not Look.canRun then animal:clearVariable("animalRunning") end
+
+    if entry.swing then
+        processSwing(animal, entry, nowMs)
+    elseif inNativeReaction(animal) then
+        releaseForReaction(animal, entry)
+    elseif runBrain then
+        animal:setVariable(Look.marker, true)
+        think(animal, entry, players, nowMs)
+    end
+end
+
+-- Every second: growing, swallowing, and the ones yet to appear.
+local function sweep(nowMs)
+    local zombies = getCell():getZombieList()
+    for key, animal in pairs(loaded) do
+        if not animal:isDead() then
+            -- Zombies close by drive an animal's stress up; nothing frightens it.
+            animal:setDebugStress(0)
+            Creatures.applyCollectiveSize(animal)
+            if zombies then absorb(animal, stateFor(key), zombies, nowMs) end
+        end
+    end
+    materialize(livingPlayers())
+end
+
+local lastBrainMs = 0
 local lastSweepMs = 0
+
+local function tick(nowMs)
+    endPulses(nowMs)
+    local runBrain = isDue(lastBrainMs, nowMs, Tuning.brainSeconds)
+    if runBrain then
+        lastBrainMs = nowMs
+        refreshLoaded()
+    end
+    local players = runBrain and livingPlayers() or nil
+    for key, animal in pairs(loaded) do
+        if not animal:isDead() and animal:getCurrentSquare() ~= nil then
+            service(animal, stateFor(key), players, nowMs, runBrain)
+        end
+    end
+end
 
 local function onTick()
     if #pendingSplits > 0 then
@@ -874,8 +1328,9 @@ local function onTick()
     end
 
     local nowMs = getTimestampMs()
-    local okHold, holdErr = pcall(holdCourse, nowMs)
-    if not okHold then log("collective course hold failed: %s", tostring(holdErr)) end
+    local okTick, tickErr = pcall(tick, nowMs)
+    if not okTick then log("collective brain failed: %s", tostring(tickErr)) end
+
     if nowMs - lastSweepMs < SWEEP_MS and nowMs >= lastSweepMs then return end
     lastSweepMs = nowMs
 
