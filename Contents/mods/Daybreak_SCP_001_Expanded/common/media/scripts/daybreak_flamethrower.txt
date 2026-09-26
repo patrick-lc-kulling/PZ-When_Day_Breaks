@@ -1,0 +1,212 @@
+module Base
+{
+    /* Flamethrower. "Incendiary weapons work as well": what burns stays down,
+       so a creature that dies on fire does not split.
+
+       It is built as a full-auto firearm whose "rounds" are fuel, fed from a
+       swappable fuel tank that works like a magazine: R swaps tanks, and the
+       engine does the gating, the decrement and the multiplayer sync itself.
+       Each shot is one burst, and the burst itself - the cone, setting things
+       alight, the fires on the ground - is Lua (FlamethrowerClient.lua,
+       tunables in shared/SCP001/Flamethrower.lua). The bullet the engine fires
+       as well does next to no damage.
+
+       MaxAmmo here and on the tank must match: a full tank is 150 bursts. */
+    item Daybreak_Flamethrower
+    {
+        DisplayCategory = Weapon,
+        ItemType = base:weapon,
+        Weight = 6.0,
+        Icon = BlowTorch,
+        WeaponSprite = Shotgun,
+        AttachmentType = Rifle,
+        TwoHandWeapon = true,
+        RequiresEquippedBothHands = true,
+
+        Ranged = true,
+        SubCategory = Firearm,
+        IsAimedFirearm = true,
+        IsAimedHandWeapon = true,
+        SwingAnim = Rifle,
+        FireMode = Auto,
+        FireModePossibilities = Auto,
+        AmmoType = Daybreak:flamethrower_fuel,
+        MagazineType = Base.Daybreak_FlamethrowerTank,
+        MaxAmmo = 150,
+        HaveChamber = false,
+        JamGunChance = 0,
+        WeaponReloadType = boltaction,
+        Reloadtime = 25,
+        Projectilecount = 1,
+        RecoilDelay = 5,
+        MuzzleFlashModelKey = muzzle_flash_shotgun,
+
+        /* The script range is only what the aiming reticle shows; the reach of
+           the flame itself is `range` in Flamethrower.lua. Keep them equal. */
+        MinRange = 0.61,
+        MaxRange = 10.0,
+        MinSightRange = 1,
+        MaxSightRange = 10.0,
+        MinAngle = 0.9,
+        Aimingtime = 10,
+        HitChance = 90,
+        AimingPerkHitChanceModifier = 1,
+        AimingPerkCritModifier = 0,
+        AimingPerkRangeModifier = 0,
+        AimingPerkMinAngleModifier = 0,
+        ToHitModifier = 1.5,
+
+        MinDamage = 0.1,
+        MaxDamage = 0.2,
+        CriticalChance = 0.0,
+        CritDmgMultiplier = 0.0,
+        KnockdownMod = 0.0,
+        PushBackMod = 0.0,
+        StopPower = 0.0,
+        KnockBackOnNoDeath = false,
+        SplatBloodOnNoDeath = false,
+        SplatNumber = 0,
+        SplatSize = 0,
+        DoorDamage = 0,
+        MaxHitcount = 1,
+        UseEndurance = false,
+
+        Swingtime = 0.5,
+        MinimumSwingtime = 0.5,
+        SwingAmountBeforeImpact = 0.0,
+
+        ConditionMax = 20,
+        ConditionLowerChanceOneIn = 100,
+
+        /* Loud, but nothing like a gunshot: an assault rifle is 150. */
+        SoundRadius = 40,
+        SoundVolume = 40,
+        SoundGain = 1.5,
+        NPCSoundBoost = 1.0,
+
+        RunAnim = Run_Weapon2,
+        HitSound = null,
+        ImpactSound = null,
+        SwingSound = SCPFlamethrowerShoot,
+        BreakSound = JS2000ShotgunBreak,
+        DropSound = JS2000ShotgunDrop,
+        EquipSound = JS2000ShotgunEquip,
+        UnequipSound = JS2000ShotgunUnEquip,
+        ClickSound = JS2000ShotgunJam,
+        BringToBearSound = JS2000ShotgunBringToBear,
+        AimReleaseSound = JS2000ShotgunAimRelease,
+        InsertAmmoSound = M16InsertAmmo,
+        InsertAmmoStartSound = M16InsertAmmoStart,
+        InsertAmmoStopSound = M16InsertAmmoStop,
+        EjectAmmoSound = M16EjectAmmo,
+        EjectAmmoStartSound = M16EjectAmmoStart,
+        EjectAmmoStopSound = M16EjectAmmoStop,
+
+        Tags = base:hasmetal;base:firearm,
+    }
+
+    /* The fuel tank: the flamethrower's magazine. Filled with petrol by the
+       recipe below, never with rounds - the menus that would load or unload
+       it as loose rounds are taken off for it (FlamethrowerClient.lua). */
+    item Daybreak_FlamethrowerTank
+    {
+        DisplayCategory = Ammo,
+        ItemType = base:normal,
+        Weight = 2.5,
+        Icon = PropaneTank,
+        AmmoType = Daybreak:flamethrower_fuel,
+        CanStack = false,
+        GunType = Base.Daybreak_Flamethrower,
+        MaxAmmo = 150,
+        WorldStaticModel = PropaneTank,
+        Tags = base:hasmetal,
+    }
+
+    /* The item behind the fuel's ammo type. AmmoType.register needs one
+       (media/registries.lua), and its name is what the tooltips list as
+       ammunition. It never spawns, and every menu that would pour a tank out
+       as these is taken off. */
+    item Daybreak_FlamethrowerFuel
+    {
+        DisplayCategory = Ammo,
+        ItemType = base:normal,
+        Weight = 0.05,
+        Icon = Petrol,
+    }
+
+    /* A hose and a pipe for the lance, a lighter for the pilot flame, all
+       welded together - and a propane tank turned into its first fuel tank.
+       Both come out empty. */
+    craftRecipe Daybreak_MakeFlamethrower
+    {
+        timedAction = Welding,
+        time = 400,
+        SkillRequired = MetalWelding:5,
+        xpAward = MetalWelding:40,
+        Tags = InHandCraft;Welding,
+        category = Metalworking,
+        inputs
+        {
+            item 1 [Base.PropaneTank] mode:destroy,
+            item 1 [Base.RubberHose],
+            item 1 [Base.MetalPipe],
+            item 2 [Base.SmallSheetMetal],
+            item 1 [Base.Lighter] mode:destroy,
+            item 2 [Base.BlowTorch],
+            item 1 tags[base:weldingmask] mode:keep,
+        }
+        outputs
+        {
+            item 1 Base.Daybreak_Flamethrower,
+            item 1 Base.Daybreak_FlamethrowerTank,
+        }
+    }
+
+    /* A spare tank from another propane tank. */
+    craftRecipe Daybreak_MakeFlamethrowerTank
+    {
+        timedAction = Welding,
+        time = 150,
+        SkillRequired = MetalWelding:3,
+        xpAward = MetalWelding:15,
+        Tags = InHandCraft;Welding,
+        category = Metalworking,
+        inputs
+        {
+            item 1 [Base.PropaneTank] mode:destroy,
+            item 1 [Base.SmallSheetMetal],
+            item 1 [Base.BlowTorch],
+            item 1 tags[base:weldingmask] mode:keep,
+        }
+        outputs
+        {
+            item 1 Base.Daybreak_FlamethrowerTank,
+        }
+    }
+
+    /* Fills a tank as far as the petrol you carry allows, in one go. The
+       recipe itself takes the minimum fill (minFillShots x litresPerShot in
+       Flamethrower.lua, 15 x 0.05 = 0.75 L - change one, change both) from
+       one container; OnCreate then tops the tank up from that container and
+       any other petrol you carry. The same pattern as vanilla's hurricane
+       lantern refill. OnTest hides it for a tank without room for the
+       minimum. */
+    craftRecipe Daybreak_FillFlamethrowerTank
+    {
+        timedAction = Making,
+        time = 80,
+        Tags = InHandCraft;CanBeDoneInDark,
+        category = Miscellaneous,
+        OnTest = DaybreakFlamethrower.canFillTank,
+        OnCreate = DaybreakFlamethrower.onFillTank,
+        inputs
+        {
+            item 1 [Base.Daybreak_FlamethrowerTank] mode:keep,
+            item 1 [*],
+            -fluid 0.75 [Petrol],
+        }
+        outputs
+        {
+        }
+    }
+}

@@ -9,6 +9,10 @@
     "Base.Daybreak_TaserCartridge": "Taser Cartridge",
     "Base.Daybreak_TaserCartridge_Spent": "Taser Cartridge (Spent)",
 
+    "Base.Daybreak_Flamethrower": "Flamethrower",
+    "Base.Daybreak_FlamethrowerTank": "Flamethrower Fuel Tank",
+    "Base.Daybreak_FlamethrowerFuel": "Flamethrower Fuel",
+
     "Base.Daybreak_Marker_Conjoined": "Hard Hat (Conjoined Marker)",
     "Base.Daybreak_Marker_Caller": "Hard Hat (Caller Marker)",
     "Base.Daybreak_Marker_Grasper": "Hard Hat (Grasper Marker)",

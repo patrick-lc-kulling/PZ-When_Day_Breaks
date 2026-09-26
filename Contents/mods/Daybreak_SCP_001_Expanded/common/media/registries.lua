@@ -9,3 +9,8 @@ ItemBodyLocation.register("Daybreak:ContactLenses")
 -- resolved while its item script is parsed, so the cartridge has to be
 -- registered here too. Arguments are (resource name, item key).
 AmmoType.register("Daybreak:taser_cartridge", "Base.Daybreak_TaserCartridge")
+
+-- The flamethrower's fuel is its ammo, fed from fuel tanks that work as its
+-- magazines. An ammo type needs an item, so this one points at a fuel item
+-- that never spawns.
+AmmoType.register("Daybreak:flamethrower_fuel", "Base.Daybreak_FlamethrowerFuel")

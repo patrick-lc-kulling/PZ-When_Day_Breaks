@@ -1,5 +1,8 @@
 {
     "Daybreak_RehydrateContactLenses": "Rehydrate Contact Lenses",
     "Daybreak_RechargeStunWeapon": "Replace Battery",
-    "Daybreak_RebuildTaserCartridge": "Rebuild Taser Cartridge"
+    "Daybreak_RebuildTaserCartridge": "Rebuild Taser Cartridge",
+    "Daybreak_MakeFlamethrower": "Make Flamethrower",
+    "Daybreak_MakeFlamethrowerTank": "Make Flamethrower Fuel Tank",
+    "Daybreak_FillFlamethrowerTank": "Fill Flamethrower Fuel Tank"
 }

@@ -1,0 +1,31 @@
+/* Sounds for the flamethrower. Placeholders on vanilla events for now; to use
+   your own, replace a clip's `event = ...` line with
+   `file = media/sound/<name>.wav,` as in daybreak_stunweapon_sounds.txt.
+
+   The engine picks the FullAuto sound up by name (SwingSound + "FullAuto")
+   and loops it while the trigger is held; the plain one plays for a single
+   burst. */
+module SCP
+{
+    sound SCPFlamethrowerShoot
+    {
+        category = Item,
+
+        clip
+        {
+            event = Object/Fireplace/Light,
+            distanceMax = 30,
+        }
+    }
+
+    sound SCPFlamethrowerShootFullAuto
+    {
+        category = Item,
+
+        clip
+        {
+            event = Object/Fireplace/Running,
+            distanceMax = 30,
+        }
+    }
+}
