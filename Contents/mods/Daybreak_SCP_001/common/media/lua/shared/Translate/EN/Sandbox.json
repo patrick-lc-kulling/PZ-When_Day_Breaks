@@ -20,11 +20,23 @@
     "Sandbox_SCP.MoonlightMaxIntensity_tooltip": "How strong moonlight gets at its absolute peak",
 
     "Sandbox_SCP.GeneralDamageMultiplier": "General Damage Multiplier",
-    "Sandbox_SCP.GeneralDamageMultiplier_tooltip": "Multiplies all health damage dealt to the player from sunlight and moonlight exposure, across every body part. Does not directly affect burn wound chance or timing.",
+    "Sandbox_SCP.GeneralDamageMultiplier_tooltip": "Multiplies all health damage dealt to the player from sunlight and moonlight exposure, across every body part, and to Project A-Life NPCs from sunlight. Does not directly affect burn wound chance or timing.",
 
     "Sandbox_SCP.VignetteEnabled": "Enable Death Vignette",
     "Sandbox_SCP.VignetteEnabled_tooltip": "If enabled, a red vignette fades in around the screen edges while standing in damaging light, growing stronger the closer to death the player is.",
 
     "Sandbox_SCP.VignetteMaxAlpha": "Vignette Max Opacity",
-    "Sandbox_SCP.VignetteMaxAlpha_tooltip": "How opaque the vignette gets at its absolute peak: fully faded in and at 0 health."
+    "Sandbox_SCP.VignetteMaxAlpha_tooltip": "How opaque the vignette gets at its absolute peak: fully faded in and at 0 health.",
+
+    "Sandbox_SCP.ALifeCompatibility": "Project A-Life NPCs Live By Night",
+    "Sandbox_SCP.ALifeCompatibility_tooltip": "Only has an effect with the Project A-Life NPCs mod. Its NPCs burn in sunlight the way the player does, shelter indoors from before dawn until the sun is down, and are out and about at night, when nothing harms them.",
+
+    "Sandbox_SCP.ALifeSunDamageMultiplier": "A-Life NPC Sun Damage Multiplier",
+    "Sandbox_SCP.ALifeSunDamageMultiplier_tooltip": "How much sunlight damage Project A-Life NPCs take compared to a player wearing the same clothes. At 0 they're unharmed, but still keep indoors by day.",
+
+    "Sandbox_SCP.ALifeShelterLeadMinutes": "A-Life NPC Shelter Lead Time (minutes)",
+    "Sandbox_SCP.ALifeShelterLeadMinutes_tooltip": "How long before dawn Project A-Life NPCs start heading indoors.",
+
+    "Sandbox_SCP.ALifeBlackout": "A-Life NPCs Black Out Their Shelters",
+    "Sandbox_SCP.ALifeBlackout_tooltip": "If enabled, Project A-Life NPCs sheltering for the day hang sheets over a building's windows and shut its outside doors, which leaves most of it dark. Never while a player is inside."
 }

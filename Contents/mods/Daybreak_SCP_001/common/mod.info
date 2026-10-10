@@ -4,8 +4,10 @@ description="Who could've thought that the Knox Event would be the least of our 
 description= Features the liquefying Sun from the SCP Essay Series: "When Day Breaks" — cover your skin and patch the holes in your clothes if you don't wish to liquefy to "death"
 description=
 description= LEGACY VERSION: the sunlight mechanic on its own, with no added items. Kept for existing saves and for anyone who wants it to stay this way. Do not enable this together with the main version.
+description=
+description= Works with Project A-Life NPCs (optional): its NPCs burn in the sun the way you do, shelter indoors through the day and come out at night.
 
-modversion=1.4.5
+modversion=1.5.0
 poster=Daybreak_Kentucky_Louisville.png
 author=NewChestPlays
 incompatible=Daybreak_SCP_001_Expanded

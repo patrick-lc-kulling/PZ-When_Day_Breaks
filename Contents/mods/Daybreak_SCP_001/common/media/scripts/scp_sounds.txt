@@ -21,4 +21,17 @@ module SCP
             volume = 1.0,
         }
     }
+
+    /* A Project A-Life NPC burning in the sun, heard from around it. */
+    sound SCPNPCBurning
+    {
+        category = Player,
+
+        clip
+        {
+            file = media/sound/burningFlesh1.wav,
+            volume = 1.0,
+            distanceMax = 30,
+        }
+    }
 }

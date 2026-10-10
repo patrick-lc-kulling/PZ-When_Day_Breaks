@@ -53,3 +53,27 @@ option SCP.VignetteMaxAlpha = {
     page = SCP,
     translation = SCP.VignetteMaxAlpha,
 }
+
+option SCP.ALifeCompatibility = {
+    type = boolean, default = true,
+    page = SCP,
+    translation = SCP.ALifeCompatibility,
+}
+
+option SCP.ALifeSunDamageMultiplier = {
+    type = double, min = 0.0, max = 5.0, default = 1.0,
+    page = SCP,
+    translation = SCP.ALifeSunDamageMultiplier,
+}
+
+option SCP.ALifeShelterLeadMinutes = {
+    type = integer, min = 0, max = 180, default = 60,
+    page = SCP,
+    translation = SCP.ALifeShelterLeadMinutes,
+}
+
+option SCP.ALifeBlackout = {
+    type = boolean, default = true,
+    page = SCP,
+    translation = SCP.ALifeBlackout,
+}
